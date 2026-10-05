@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Digital Corner</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #001B49; color: #f9fafb; min-height: 100vh; font-size: 14px; display: flex; flex-direction: column; }
+button, a { font-family: Arial, sans-serif; }
+.topbar { background: #0a1f4e; border-bottom: 2px solid #1e3a6e; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; gap: 12px; }
+.topbar-title { font-size: 15px; font-weight: bold; letter-spacing: 0.02em; }
+.topbar-side { min-width: 180px; display: flex; align-items: center; gap: 10px; }
+.topbar-side.right { justify-content: flex-end; }
+.topbar-logo { height: 38px; max-width: 160px; object-fit: contain; }
+.role-badge { font-size: 10px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; color: #64748b; border: 1px solid #1e3a6e; border-radius: 10px; padding: 3px 9px; }
+.role-badge:empty { display: none; }
+.role-badge.admin { color: #fbbf24; border-color: rgba(245,158,11,0.4); }
+.btn-signout { background: transparent; border: 1px solid #1e3a6e; color: #94a3b8; padding: 5px 12px; border-radius: 7px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+.btn-signout:hover { border-color: #374151; background: #111827; color: #f9fafb; }
+.wrap { flex: 1; width: 100%; max-width: 1080px; margin: 0 auto; padding: 44px 20px 40px; }
+.hello { font-size: 22px; font-weight: bold; margin-bottom: 6px; }
+.lead { font-size: 13px; color: #94a3b8; margin-bottom: 28px; line-height: 1.6; }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.card { background: #1e293b; border: 1px solid #1e3a6e; border-radius: 12px; padding: 22px 22px 20px; border-top: 3px solid #3b82f6; display: flex; flex-direction: column; gap: 10px; text-decoration: none; color: inherit; transition: border-color .15s, transform .15s, background .15s; min-height: 210px; }
+a.card:hover, a.card:focus-visible { border-color: #3b82f6; background: #22324a; transform: translateY(-2px); outline: none; }
+.card.c-teal { border-top-color: #14b8a6; } .card.c-purple { border-top-color: #a855f7; }
+.card.soon { opacity: .55; cursor: default; border-top-color: #374151; }
+.card-icon { font-size: 26px; line-height: 1; }
+.card-title { font-size: 16px; font-weight: bold; }
+.card-text { font-size: 12px; color: #94a3b8; line-height: 1.6; flex: 1; }
+.card-list { font-size: 11px; color: #cbd5e1; line-height: 1.7; padding-left: 16px; }
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; }
+.tag { font-size: 9px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 10px; border: 1px solid #1e3a6e; color: #94a3b8; white-space: nowrap; }
+.tag.new { color: #5eead4; border-color: rgba(20,184,166,0.45); }
+.tag.ext { color: #93c5fd; border-color: rgba(59,130,246,0.45); }
+.go { color: #93c5fd; font-weight: bold; }
+.notice { border-radius: 8px; padding: 10px 14px; font-size: 12px; line-height: 1.6; margin-bottom: 18px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
+.notice:empty { display: none; }
+.foot { text-align: center; font-size: 11px; color: #4b6a9e; padding: 18px; }
+@media (max-width: 900px) { .cards { grid-template-columns: 1fr; } .card { min-height: 0; } }
+@media (max-width: 600px) {
+  .topbar { padding: 0 12px; } .topbar-side { min-width: 0; } .topbar-logo, .role-badge { display: none; }
+  .topbar-title { font-size: 13px; } .wrap { padding: 28px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-side">
+    <span class="role-badge" id="roleBadge"></span>
+    <button class="btn-signout" onclick="signOut()">Sign out</button>
+  </div>
+  <div class="topbar-title">Digital Corner</div>
+  <div class="topbar-side right">
+    <img class="topbar-logo" src="sarah-white-logo.png" alt="" onerror="this.style.display='none'">
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="notice" id="notice"></div>
+  <h1 class="hello">What would you like to check?</h1>
+  <p class="lead">BIM data tools for Revizto and Aconex. Pick a tool to open it.</p>
+
+  <div class="cards">
+    <a class="card c-teal" href="/object-data" id="cardOd">
+      <div class="card-icon">🧱</div>
+      <div class="card-title">Revizto Object Data</div>
+      <div class="card-text">
+        <ul class="card-list">
+          <li>Models loaded and their sync dates, checked against a baseline</li>
+          <li>Element counts per model over time, with drop alerts</li>
+          <li>Property search and quantities (e.g. steel tonnage)</li>
+        </ul>
+      </div>
+      <div class="card-foot"><span class="tag new">New</span><span class="go">Open →</span></div>
+    </a>
+
+    <a class="card" href="https://aconexrevizto2d.vercel.app/" target="_blank" rel="noopener">
+      <div class="card-icon">📐</div>
+      <div class="card-title">2D Sheet Audit</div>
+      <div class="card-text">Drawing revisions in Aconex compared with the 2D sheets in Revizto. Opens the current audit site, which has its own sign-in for now.</div>
+      <div class="card-foot"><span class="tag ext">Separate site</span><span class="go">Open ↗</span></div>
+    </a>
+
+    <div class="card c-purple soon" aria-disabled="true">
+      <div class="card-icon">🗒️</div>
+      <div class="card-title">Revizto Issues</div>
+      <div class="card-text">Issue tracking and reporting from Revizto.</div>
+      <div class="card-foot"><span class="tag">Coming soon</span><span></span></div>
+    </div>
+  </div>
+</main>
+<div class="foot">Digital Corner · proof of concept</div>
+
+<script>
+const $ = id => document.getElementById(id);
+async function signOut() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch {}
+  location.replace('/?signedout=1');
+}
+fetch('/api/login', { cache: 'no-store' })
+  .then(r => r.json())
+  .then(d => {
+    if (!d || !d.signedIn) { location.replace('/?expired=1'); return; }
+    const b = $('roleBadge');
+    b.textContent = d.role === 'admin' ? 'Admin' : 'Team';
+    b.className = 'role-badge' + (d.role === 'admin' ? ' admin' : '');
+    if (d.role !== 'admin') {
+      const c = $('cardOd');
+      c.removeAttribute('href');
+      c.classList.add('soon');
+      c.querySelector('.go').textContent = 'Admin only for now';
+    }
+  })
+  .catch(() => {});
+if (new URLSearchParams(location.search).get('admin')) {
+  $('notice').textContent = 'That page needs the admin sign-in.';
+  history.replaceState(null, '', location.pathname);
+}
+</script>
+</body>
+</html>

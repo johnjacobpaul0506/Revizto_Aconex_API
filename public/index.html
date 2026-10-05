@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in | Digital Corner</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #001B49; color: #f9fafb; min-height: 100vh; display: flex; flex-direction: column; }
+.topbar { background: #0a1f4e; border-bottom: 2px solid #1e3a6e; height: 64px; display: flex; align-items: center; justify-content: center; padding: 0 20px; position: relative; }
+.topbar-title { font-size: 15px; font-weight: bold; letter-spacing: 0.02em; }
+.topbar-logo { position: absolute; right: 20px; height: 38px; max-width: 160px; object-fit: contain; }
+.wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px 16px; }
+.card { background: #0a1f4e; border: 1px solid #1e3a6e; border-radius: 14px; padding: 32px 32px 28px; width: 380px; max-width: 100%; border-top: 3px solid #3b82f6; }
+.card h1 { font-size: 18px; margin-bottom: 4px; }
+.card .sub { font-size: 12px; color: #64748b; margin-bottom: 22px; line-height: 1.5; }
+label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 6px; }
+input { width: 100%; background: #111827; border: 1px solid #1e3a6e; border-radius: 7px; color: #f9fafb; padding: 10px 12px; font-size: 14px; font-family: Arial, sans-serif; outline: none; margin-bottom: 14px; }
+input:focus { border-color: #3b82f6; }
+.pw-row { position: relative; }
+.pw-row input { padding-right: 60px; }
+.pw-toggle { position: absolute; right: 8px; top: 7px; background: none; border: none; color: #64748b; font-size: 11px; cursor: pointer; padding: 4px 6px; }
+.pw-toggle:hover { color: #93c5fd; }
+button.primary { width: 100%; background: linear-gradient(135deg,#3b82f6,#1d4ed8); color: #fff; border: none; padding: 11px; border-radius: 7px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
+button.primary:disabled { opacity: .55; cursor: default; }
+.spinner { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; display: none; }
+button.busy .spinner { display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.msg { font-size: 12px; line-height: 1.5; border-radius: 7px; padding: 9px 12px; margin-bottom: 16px; display: none; }
+.msg.show { display: block; }
+.msg.err { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+.msg.info { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
+.foot { font-size: 11px; color: #4b6a9e; margin-top: 18px; text-align: center; line-height: 1.5; }
+@media (max-width: 520px) { .topbar-logo { display: none; } .card { padding: 26px 20px 22px; } }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-title">Digital Corner | BIM data tools</div>
+  <img class="topbar-logo" src="sarah-white-logo.png" alt="" onerror="this.style.display='none'">
+</div>
+
+<div class="wrap">
+  <form class="card" id="form" novalidate>
+    <h1>Sign in</h1>
+    <p class="sub">Model checks, element counts and quantities from Revizto.</p>
+    <div class="msg" id="msg" role="alert"></div>
+
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+
+    <label for="password">Password</label>
+    <div class="pw-row">
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button type="button" class="pw-toggle" id="pwToggle" aria-label="Show password">Show</button>
+    </div>
+
+    <button type="submit" class="primary" id="btn"><span class="spinner"></span><span id="btnLbl">Sign in</span></button>
+    <p class="foot">Access is managed by the Digital team.<br>Ask them if you need the login details.</p>
+  </form>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function show(kind, text) {
+  const m = $('msg');
+  m.className = `msg show ${kind}`;
+  m.textContent = text;
+}
+function clearMsg() { $('msg').className = 'msg'; }
+
+// Already signed in? Go straight to the start page.
+fetch('/api/login', { cache: 'no-store' })
+  .then(r => r.json())
+  .then(d => { if (d && d.signedIn) location.replace('/home'); })
+  .catch(() => {});
+
+const params = new URLSearchParams(location.search);
+if (params.get('expired')) show('info', 'Your session has ended. Please sign in again.');
+else if (params.get('signedout')) show('info', 'You have signed out.');
+if (params.toString()) history.replaceState(null, '', '/');
+
+$('pwToggle').onclick = () => {
+  const p = $('password');
+  const showing = p.type === 'text';
+  p.type = showing ? 'password' : 'text';
+  $('pwToggle').textContent = showing ? 'Show' : 'Hide';
+  $('pwToggle').setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+};
+
+['username', 'password'].forEach(id => $(id).addEventListener('input', clearMsg));
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const username = $('username').value.trim();
+  const password = $('password').value;
+  if (!username || !password) {
+    show('err', 'Enter your username and password.');
+    (username ? $('password') : $('username')).focus();
+    return;
+  }
+  const btn = $('btn');
+  btn.disabled = true;
+  btn.classList.add('busy');
+  $('btnLbl').textContent = 'Signing in…';
+  try {
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    let d = null;
+    try { d = await r.json(); } catch {}
+    if (r.ok && d && d.ok) {
+      location.replace('/home');
+      return;
+    }
+    show('err', (d && d.error) || `Sign-in failed (HTTP ${r.status}).`);
+    $('password').value = '';
+    $('password').focus();
+  } catch {
+    show('err', 'Could not reach the server. Check your connection and try again.');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('busy');
+    $('btnLbl').textContent = 'Sign in';
+  }
+});
+
+$('username').focus();
+</script>
+</body>
+</html>

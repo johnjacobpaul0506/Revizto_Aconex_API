@@ -1,0 +1,2136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Revizto Object Data | Digital Corner</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #001B49; color: #f9fafb; min-height: 100vh; font-size: 14px; }
+button, input, select, textarea { font-family: Arial, sans-serif; }
+.topbar { background: #0a1f4e; border-bottom: 2px solid #1e3a6e; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; position: sticky; top: 0; z-index: 200; gap: 12px; }
+.topbar-title { font-size: 15px; font-weight: bold; letter-spacing: 0.02em; text-align: center; }
+.topbar-side { min-width: 230px; display: flex; align-items: center; gap: 10px; }
+.topbar-side.right { justify-content: flex-end; }
+.topbar-logo { height: 38px; max-width: 160px; object-fit: contain; }
+.role-badge { font-size: 10px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; color: #64748b; border: 1px solid #1e3a6e; border-radius: 10px; padding: 3px 9px; }
+.role-badge:empty { display: none; }
+.role-badge.admin { color: #fbbf24; border-color: rgba(245,158,11,0.4); }
+.btn-top { white-space: nowrap; background: transparent; border: 1px solid #1e3a6e; color: #94a3b8; padding: 5px 12px; border-radius: 7px; font-size: 11px; cursor: pointer; text-decoration: none; }
+.btn-top:hover { border-color: #374151; background: #111827; color: #f9fafb; }
+.layout { display: flex; min-height: calc(100vh - 64px); }
+.sidebar { width: 262px; min-width: 262px; background: #0a1f4e; border-right: 1px solid #1e3a6e; padding: 20px 14px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.section-header { font-size: 10px; font-weight: bold; letter-spacing: 0.12em; text-transform: uppercase; color: #4b6a9e; padding: 14px 8px 6px 8px; }
+.section-header:first-child { padding-top: 0; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: #374151; margin-top: 4px; }
+.status-dot.ok { background: #22c55e; } .status-dot.err { background: #ef4444; } .status-dot.busy { background: #f59e0b; }
+.s-divider { border: none; border-top: 1px solid #1e3a6e; margin: 4px 0; }
+.f-sel, .f-inp { background: #111827; border: 1px solid #1e3a6e; border-radius: 7px; color: #f9fafb; padding: 7px 9px; font-size: 12px; width: 100%; outline: none; }
+.f-sel:focus, .f-inp:focus, textarea.f-inp:focus { border-color: #3b82f6; }
+textarea.f-inp { resize: vertical; min-height: 120px; line-height: 1.5; font-family: 'Courier New', monospace; }
+.sync-box { background: #111827; border: 1px solid #1e3a6e; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.sync-line { display: flex; align-items: flex-start; gap: 8px; font-size: 11px; color: #94a3b8; line-height: 1.45; }
+.sync-line strong { color: #cbd5e1; }
+.btn-refresh { background: linear-gradient(135deg,#3b82f6,#1d4ed8); color: #fff; border: none; padding: 9px 12px; border-radius: 7px; font-size: 12px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-refresh:disabled { opacity: .5; cursor: default; }
+.spinner { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; display: none; }
+.busy .spinner { display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.link-btn { background: none; border: none; color: #93c5fd; font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0; }
+.tool-btn { background: linear-gradient(135deg,#4c1d95,#6d28d9); color: #fff; border: none; padding: 8px 12px; border-radius: 7px; font-size: 11px; font-weight: bold; cursor: pointer; width: 100%; text-align: left; display: flex; align-items: center; gap: 8px; }
+.tool-btn:hover { background: linear-gradient(135deg,#5b21b6,#7c3aed); }
+.tool-sub { font-size: 9px; font-weight: normal; color: rgba(255,255,255,0.55); margin-top: 1px; }
+.side-help { font-size: 11px; color: #64748b; line-height: 1.55; padding: 4px 6px; }
+.main { flex: 1; padding: 22px 26px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; min-width: 0; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid #1e3a6e; padding-bottom: 10px; }
+.tab { background: transparent; border: 1px solid #1e3a6e; color: #94a3b8; padding: 8px 16px; border-radius: 8px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.tab:hover { color: #f9fafb; border-color: #374151; }
+.tab.active { background: #1e3a6e; color: #fff; border-color: #3b82f6; font-weight: bold; }
+.tab .badge { font-size: 10px; font-weight: bold; border-radius: 9px; padding: 1px 7px; background: rgba(239,68,68,0.18); color: #fca5a5; }
+.tab .badge.amber { background: rgba(245,158,11,0.16); color: #fbbf24; }
+.tab .badge:empty { display: none; }
+.view { display: none; flex-direction: column; gap: 18px; }
+.view.active { display: flex; }
+.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.kpi { background: #1e293b; border: 1px solid #1e3a6e; border-radius: 10px; padding: 14px 16px; border-top: 3px solid transparent; min-width: 0; }
+.kpi.k-blue { border-top-color: #3b82f6; } .kpi.k-green { border-top-color: #22c55e; } .kpi.k-red { border-top-color: #ef4444; }
+.kpi.k-purple { border-top-color: #a855f7; } .kpi.k-amber { border-top-color: #f59e0b; } .kpi.k-teal { border-top-color: #14b8a6; }
+.kpi-label { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; }
+.kpi-val { font-size: 28px; font-weight: bold; margin: 6px 0 3px; line-height: 1; color: #f9fafb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi-sub { font-size: 11px; color: #64748b; line-height: 1.4; }
+.panel { background: #1e293b; border: 1px solid #1e3a6e; border-radius: 10px; overflow: hidden; min-width: 0; }
+.panel-head { background: #0f1f3d; border-bottom: 1px solid #1e3a6e; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.panel-title { font-size: 13px; font-weight: bold; color: #cbd5e1; }
+.panel-count { font-size: 11px; color: #64748b; font-weight: normal; margin-left: 6px; }
+.panel-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.panel-body { padding: 14px 16px; }
+.panel-note { font-size: 11px; color: #64748b; padding: 10px 16px; border-top: 1px solid #1e3a6e; line-height: 1.5; }
+.btn-sm { background: #374151; color: #f9fafb; border: none; padding: 6px 13px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+.btn-sm:hover:not(:disabled) { background: #4b5563; }
+.btn-sm:disabled { opacity: .45; cursor: default; }
+.btn-sm.blue { background: #1e3a6e; color: #93c5fd; } .btn-sm.blue:hover:not(:disabled) { background: #25467f; }
+.btn-sm.go { background: linear-gradient(135deg,#16a34a,#15803d); color: #fff; }
+.btn-sm.go:hover:not(:disabled) { background: linear-gradient(135deg,#22c55e,#16a34a); }
+.btn-sm.warn { background: rgba(239,68,68,0.14); color: #fca5a5; }
+.btn-sm.warn:hover:not(:disabled) { background: rgba(239,68,68,0.24); }
+.btn-xs { background: #1e3a6e; color: #93c5fd; border: none; padding: 4px 9px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+.btn-xs:hover:not(:disabled) { background: #25467f; }
+.btn-xs:disabled { opacity: .45; cursor: default; }
+.btn-xs.ok { background: rgba(34,197,94,0.14); color: #86efac; }
+.btn-xs.warn { background: rgba(239,68,68,0.12); color: #fca5a5; }
+.btn-xs.ghost { background: transparent; border: 1px solid #1e3a6e; color: #94a3b8; }
+.tbl-wrap { overflow: auto; max-height: 62vh; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th { background: #0f1f3d; padding: 9px 12px; text-align: left; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; border-bottom: 1px solid #1e3a6e; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+thead th.sortable { cursor: pointer; user-select: none; }
+thead th.sortable:hover { color: #93c5fd; }
+thead th .arrow { color: #3b82f6; margin-left: 4px; }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr { border-bottom: 1px solid rgba(30,58,110,0.4); }
+tbody tr:hover { background: rgba(59,130,246,0.05); }
+tbody tr.sel { background: rgba(59,130,246,0.12); }
+tbody tr.clickable { cursor: pointer; }
+tbody td { padding: 8px 12px; color: #e2e8f0; font-size: 12px; vertical-align: top; }
+td.mono { font-family: 'Courier New', monospace; font-size: 11px; }
+td.wrap { white-space: normal; overflow-wrap: anywhere; min-width: 160px; }
+td.nowrap { white-space: nowrap; }
+.sub { font-size: 10px; color: #64748b; margin-top: 2px; overflow-wrap: anywhere; }
+tfoot td { background: #0f1f3d; padding: 9px 12px; font-weight: bold; color: #f9fafb; border-top: 1px solid #1e3a6e; position: sticky; bottom: 0; }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+.p-ok { background: rgba(34,197,94,0.12); color: #4ade80; }
+.p-bad { background: rgba(239,68,68,0.14); color: #f87171; }
+.p-warn { background: rgba(245,158,11,0.14); color: #fbbf24; }
+.p-info { background: rgba(59,130,246,0.14); color: #93c5fd; }
+.p-mute { background: rgba(100,116,139,0.16); color: #94a3b8; }
+.empty { padding: 36px 20px; text-align: center; color: #64748b; font-size: 12px; line-height: 1.6; }
+.empty strong { color: #94a3b8; display: block; font-size: 13px; margin-bottom: 4px; }
+.idle-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 60px 20px; text-align: center; }
+.idle-title { font-size: 18px; font-weight: bold; color: #64748b; }
+.idle-sub { font-size: 13px; color: #4b6a9e; max-width: 460px; line-height: 1.6; }
+#notice:empty { display: none; }
+.notice { border-radius: 8px; padding: 10px 14px; font-size: 12px; line-height: 1.6; }
+.notice.warn { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
+.notice.err { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+.notice.ok { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+.notice.info { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
+.notice .link-btn { color: inherit; font-weight: bold; font-size: 12px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.chip { font-size: 11px; padding: 4px 11px; border-radius: 14px; border: 1px solid #1e3a6e; background: #111827; color: #94a3b8; cursor: pointer; user-select: none; white-space: nowrap; }
+.chip:hover { border-color: #3b82f6; color: #93c5fd; }
+.chip.active { background: #1e3a6e; border-color: #3b82f6; color: #93c5fd; font-weight: bold; }
+.toast { position: fixed; bottom: 28px; right: 28px; background: #7c3aed; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 12px; font-weight: bold; box-shadow: 0 4px 18px rgba(0,0,0,0.4); z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 440px; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+.overlay.show { display: flex; }
+.dialog { background: #0a1f4e; border: 1px solid #1e3a6e; border-radius: 12px; padding: 24px 26px; width: 460px; max-width: 100%; }
+.dialog h3 { font-size: 15px; color: #f9fafb; margin-bottom: 6px; }
+.dialog p { font-size: 12px; color: #94a3b8; margin-bottom: 14px; line-height: 1.55; }
+.dialog label { font-size: 11px; color: #94a3b8; display: block; margin: 10px 0 6px; }
+.dialog .row { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+.btn-ghost { background: transparent; border: 1px solid #1e3a6e; color: #94a3b8; padding: 7px 18px; border-radius: 7px; font-size: 12px; cursor: pointer; }
+.btn-primary { background: #3b82f6; border: none; color: #fff; padding: 7px 20px; border-radius: 7px; font-size: 12px; font-weight: bold; cursor: pointer; }
+.btn-primary:disabled { opacity: .5; cursor: default; }
+.field-err { font-size: 11px; color: #fca5a5; margin-top: 6px; min-height: 14px; }
+.big-box { background: #0a1f4e; border: 1px solid #1e3a6e; border-radius: 14px; width: 100%; max-width: 1000px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+.big-head { background: #0f1f3d; border-bottom: 1px solid #1e3a6e; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; }
+.big-title { font-size: 15px; font-weight: bold; }
+.big-close { background: transparent; border: none; color: #64748b; font-size: 20px; cursor: pointer; padding: 2px 6px; }
+.big-close:hover { color: #ef4444; }
+.big-body { padding: 18px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.big-foot { background: #0f1f3d; border-top: 1px solid #1e3a6e; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.foot-note { font-size: 11px; color: #94a3b8; flex: 1; }
+.box-tbl { overflow: auto; border: 1px solid #1e3a6e; border-radius: 8px; max-height: 40vh; }
+.box-tbl table td { font-size: 11px; }
+.lbl { font-size: 11px; font-weight: bold; color: #93c5fd; letter-spacing: .03em; margin-bottom: 6px; }
+.help { font-size: 11px; color: #94a3b8; line-height: 1.6; }
+.help ol { margin: 4px 0 0 18px; }
+code { background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+.acc-grid { display: grid; grid-template-columns: 1fr 1.3fr 1.3fr auto; gap: 8px; align-items: center; }
+select.list { min-height: 220px; padding: 4px; font-size: 12px; }
+select.list option { padding: 5px 6px; border-radius: 4px; }
+/* Chart */
+.chart-wrap { position: relative; padding: 8px 12px 6px; }
+.chart-wrap svg { display: block; width: 100%; height: 270px; }
+.chart-tip { position: absolute; pointer-events: none; background: #0b1220; border: 1px solid #1e3a6e; border-radius: 8px; padding: 8px 10px; font-size: 11px; color: #cbd5e1; line-height: 1.5; box-shadow: 0 6px 18px rgba(0,0,0,.4); display: none; white-space: nowrap; z-index: 5; }
+.chart-tip strong { color: #f9fafb; font-size: 13px; display: block; }
+.chart-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: #94a3b8; padding: 0 16px 12px; }
+.chart-meta b { color: #e2e8f0; }
+/* Search builder */
+.builder { display: flex; flex-direction: column; gap: 14px; }
+.b-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.b-label { font-size: 12px; color: #cbd5e1; }
+.cond { display: grid; grid-template-columns: minmax(220px, 2fr) 150px minmax(140px, 1.4fr) 28px; gap: 8px; align-items: start; }
+.cond.between { grid-template-columns: minmax(220px, 2fr) 150px minmax(90px, .7fr) minmax(90px, .7fr) 28px; }
+.cond .f-inp, .cond .f-sel { padding: 8px 9px; }
+.x-btn { background: transparent; border: 1px solid #1e3a6e; color: #64748b; border-radius: 6px; height: 33px; cursor: pointer; font-size: 13px; }
+.x-btn:hover { color: #ef4444; border-color: rgba(239,68,68,.5); }
+.picked { font-size: 10px; color: #64748b; margin-top: 3px; }
+.col-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 4px 6px 4px 10px; border-radius: 14px; border: 1px solid #1e3a6e; background: #111827; color: #cbd5e1; }
+.col-chip .cat { color: #64748b; }
+.col-chip button { background: none; border: none; color: #64748b; cursor: pointer; font-size: 12px; padding: 0 3px; }
+.col-chip button:hover { color: #ef4444; }
+.calc { display: grid; grid-template-columns: minmax(140px, 1fr) 20px minmax(240px, 3fr) 28px; gap: 8px; align-items: center; }
+.calc .eq { color: #64748b; text-align: center; }
+.calc-err { font-size: 10px; color: #fca5a5; grid-column: 3 / 4; margin-top: -4px; }
+.pp { position: absolute; z-index: 3000; background: #0b1220; border: 1px solid #3b82f6; border-radius: 8px; max-height: 300px; overflow-y: auto; box-shadow: 0 8px 22px rgba(0,0,0,.5); display: none; min-width: 320px; }
+.pp-item { padding: 7px 10px; font-size: 12px; cursor: pointer; border-bottom: 1px solid rgba(30,58,110,.5); }
+.pp-item:last-child { border-bottom: none; }
+.pp-item:hover, .pp-item.hl { background: #1e3a6e; }
+.pp-item .pp-cat { font-size: 10px; color: #64748b; margin-top: 2px; }
+.pp-msg { padding: 10px; font-size: 11px; color: #64748b; }
+.progress { font-size: 12px; color: #93c5fd; display: flex; align-items: center; gap: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.tile { background: #111827; border: 1px solid #1e3a6e; border-radius: 10px; padding: 12px 14px; border-left: 3px solid #14b8a6; min-width: 0; }
+.tile-lbl { font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-val { font-size: 24px; font-weight: bold; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+.pager { display: flex; gap: 8px; align-items: center; font-size: 11px; color: #94a3b8; padding: 10px 16px; border-top: 1px solid #1e3a6e; flex-wrap: wrap; }
+.agg-sel { background: transparent; border: 1px solid #1e3a6e; color: #93c5fd; border-radius: 5px; font-size: 10px; padding: 2px 4px; margin-right: 6px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #1e3a6e; border-radius: 3px; }
+@media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 860px) {
+  .cond, .cond.between { grid-template-columns: 1fr 1fr; }
+  .cond > :first-child { grid-column: 1 / -1; }
+  .calc { grid-template-columns: 1fr 28px; } .calc .eq { display: none; } .calc > :nth-child(3) { grid-column: 1 / 2; }
+  .acc-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: 0; border-right: none; border-bottom: 1px solid #1e3a6e; }
+  .main { padding: 16px; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .topbar { padding: 0 12px; } .topbar-side { min-width: 0; } .topbar-logo, .role-badge { display: none; }
+  .topbar-title { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-side">
+    <span class="role-badge" id="roleBadge"></span>
+    <a class="btn-top" href="/home">← Home</a>
+    <button class="btn-top" onclick="signOut()">Sign out</button>
+  </div>
+  <div class="topbar-title">Revizto Object Data</div>
+  <div class="topbar-side right">
+    <img class="topbar-logo" src="sarah-white-logo.png" alt="" onerror="this.style.display='none'">
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="section-header">Project</div>
+    <select class="f-sel" id="projectSel" disabled><option>Loading…</option></select>
+
+    <div class="sync-box" style="margin-top:6px;">
+      <div class="sync-line"><div class="status-dot" id="dotRevizto"></div><span id="lblRevizto">Revizto: checking…</span></div>
+      <div class="sync-line"><div class="status-dot" id="dotData"></div><span id="lblData">Revizto data: —</span></div>
+      <div class="sync-line"><div class="status-dot" id="dotLoaded"></div><span>Loaded: <strong id="lblLoaded">—</strong></span></div>
+      <button class="btn-refresh" id="btnReload" disabled onclick="loadOverview(true)"><span class="spinner"></span><span id="lblReload">↻ Reload from Revizto</span></button>
+    </div>
+
+    <hr class="s-divider">
+    <div class="section-header">Admin</div>
+    <button class="tool-btn" onclick="openManage()">
+      <span style="font-size:16px;">🗂️</span>
+      <div><div>Manage Projects</div><div class="tool-sub">Projects and Revizto accounts</div></div>
+    </button>
+
+    <hr class="s-divider">
+    <div class="section-header">How it works</div>
+    <div class="side-help" id="sideHelp"></div>
+  </aside>
+
+  <main class="main">
+    <div id="notice"></div>
+
+    <div class="idle-screen" id="idle">
+      <div style="font-size:48px;opacity:.2;">🧱</div>
+      <div class="idle-title" id="idleTitle">Loading…</div>
+      <div class="idle-sub" id="idleSub"></div>
+    </div>
+
+    <div id="content" style="display:none;flex-direction:column;gap:18px;">
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="models" onclick="setTab('models')">📋 Models &amp; sync <span class="badge" id="bdgModels"></span></button>
+        <button class="tab" data-tab="counts" onclick="setTab('counts')">📈 Element counts <span class="badge" id="bdgCounts"></span></button>
+        <button class="tab" data-tab="search" onclick="setTab('search')">🔎 Property search</button>
+      </div>
+
+      <!-- ── Models & sync ── -->
+      <section class="view active" id="view-models">
+        <div class="kpi-row">
+          <div class="kpi k-blue"><div class="kpi-label">Required</div><div class="kpi-val" id="kReq">—</div><div class="kpi-sub">models in the baseline</div></div>
+          <div class="kpi k-green"><div class="kpi-label">Found</div><div class="kpi-val" id="kFound">—</div><div class="kpi-sub" id="kFoundSub">in Revizto</div></div>
+          <div class="kpi k-red"><div class="kpi-label">Missing</div><div class="kpi-val" id="kMiss">—</div><div class="kpi-sub">required, not in Revizto</div></div>
+          <div class="kpi k-amber"><div class="kpi-label">Not in baseline</div><div class="kpi-val" id="kNew">—</div><div class="kpi-sub">new or unexpected models</div></div>
+          <div class="kpi k-purple"><div class="kpi-label">Models in Revizto</div><div class="kpi-val" id="kModels">—</div><div class="kpi-sub" id="kModelsSub"></div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">✅ Baseline check<span class="panel-count" id="cntBaseline"></span></div>
+            <div class="panel-actions">
+              <div class="chips" id="chipBaseline"></div>
+              <button class="btn-sm blue" onclick="openBaseline()">✎ Edit baseline</button>
+              <button class="btn-sm" onclick="exportBaselineCsv()">⬇ CSV</button>
+            </div>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>Status</th><th>File name contains</th><th>Model in Revizto</th><th>Scene</th><th>Last synced</th><th>Synced by</th></tr></thead>
+            <tbody id="tbBaseline"></tbody>
+          </table></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">🆕 Not in baseline<span class="panel-count" id="cntNew"></span></div>
+            <div class="panel-actions">
+              <button class="btn-sm go" id="btnApproveSel" onclick="approveSelected()" disabled>✔ Approve selected</button>
+              <button class="btn-sm" id="btnIgnoredToggle" onclick="toggleIgnored()">Show ignored</button>
+            </div>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th style="width:1%"><input type="checkbox" id="cbAllNew" onclick="toggleAllNew(this.checked)" aria-label="Select all"></th><th>Model file</th><th>Scene</th><th>Last synced</th><th>Synced by</th><th></th></tr></thead>
+            <tbody id="tbNew"></tbody>
+          </table></div>
+          <div id="ignoredBox" style="display:none;">
+            <div class="panel-note"><strong style="color:#94a3b8">Ignored</strong> – models whose file name contains this text aren't flagged.</div>
+            <div class="tbl-wrap"><table><tbody id="tbIgnored"></tbody></table></div>
+          </div>
+          <div class="panel-note">
+            <strong>Approve</strong> adds a fixed piece of text to the baseline (you can edit it first): any model whose file name contains it counts as present, so revision tags like <code>[14]</code> can change freely.
+            <strong>Ignore</strong> stops a model being flagged.
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Element counts ── -->
+      <section class="view" id="view-counts">
+        <div class="kpi-row">
+          <div class="kpi k-teal"><div class="kpi-label">Elements</div><div class="kpi-val" id="kElems">—</div><div class="kpi-sub">latest counts, all models</div></div>
+          <div class="kpi k-red"><div class="kpi-label">Drops flagged</div><div class="kpi-val" id="kDrops">—</div><div class="kpi-sub" id="kDropsSub">—</div></div>
+          <div class="kpi k-amber"><div class="kpi-label">Need counting</div><div class="kpi-val" id="kNeed">—</div><div class="kpi-sub">new or re-synced since last count</div></div>
+          <div class="kpi k-blue"><div class="kpi-label">Rises</div><div class="kpi-val" id="kRises">—</div><div class="kpi-sub">big increases (for info)</div></div>
+          <div class="kpi k-purple"><div class="kpi-label">Alert level</div><div class="kpi-val" id="kTh">—</div><div class="kpi-sub"><button class="link-btn" onclick="changeThreshold()">Change</button></div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title" id="chartTitle">📈 Element count over time</div>
+            <div class="panel-actions"><span class="sub" id="chartHint">Pick a model in the table below.</span></div>
+          </div>
+          <div class="chart-wrap" id="chartWrap"><div class="empty"><strong>No model picked</strong>Click a row in the table below to see its element count over time.</div></div>
+          <div class="chart-meta" id="chartMeta"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">🧮 Element count per model file<span class="panel-count" id="cntCounts"></span></div>
+            <div class="panel-actions">
+              <div class="chips" id="chipCounts"></div>
+              <input class="f-inp" id="countFilter" type="search" placeholder="Find a model…" style="width:180px;" oninput="renderCounts()">
+              <button class="btn-sm go" id="btnCountChanged" onclick="countChanged()">▶ Count changed</button>
+              <button class="btn-sm warn" id="btnCountStop" onclick="stopCounting()" style="display:none;">■ Stop</button>
+            </div>
+          </div>
+          <div class="panel-note" id="countProgress" style="display:none;border-top:none;border-bottom:1px solid #1e3a6e;color:#93c5fd;"></div>
+          <div class="tbl-wrap"><table>
+            <thead><tr id="thCounts"></tr></thead>
+            <tbody id="tbCounts"></tbody>
+          </table></div>
+          <div class="panel-note">
+            Counts the model's elements the way Revizto's "Elements only" does. A count is compared with the count from the model's previous sync.
+            Baseline models keep their history even if a re-uploaded file gets a new Revizto Id.
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Property search ── -->
+      <section class="view" id="view-search">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">🔎 Search set</div>
+            <div class="panel-actions">
+              <select class="f-sel" id="savedSel" style="width:220px;" onchange="loadSaved()"><option value="">Saved searches…</option></select>
+              <button class="btn-sm" onclick="newSearch()">New</button>
+              <button class="btn-sm blue" onclick="saveSearch(false)">💾 Save</button>
+              <button class="btn-sm" onclick="saveSearch(true)">Save as…</button>
+              <button class="btn-sm warn" id="btnDelSaved" onclick="deleteSaved()" disabled>Delete</button>
+            </div>
+          </div>
+          <div class="panel-body builder">
+            <div class="b-row">
+              <span class="b-label">Find elements where</span>
+              <select class="f-sel" id="matchSel" style="width:auto;" onchange="sDef.match=this.value"><option value="all">all</option><option value="any">any</option></select>
+              <span class="b-label">of these are true:</span>
+            </div>
+            <div id="conds" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <div><button class="btn-xs" onclick="addCondition()">＋ Add condition</button></div>
+
+            <div class="b-row">
+              <span class="b-label">In</span>
+              <select class="f-sel" id="scopeSel" style="width:auto;max-width:420px;"></select>
+              <label class="b-label" style="display:flex;gap:6px;align-items:center;cursor:pointer;margin-left:8px;">
+                <input type="checkbox" id="elemOnly" checked onchange="sDef.elementsOnly=this.checked"> Elements only (like Revizto, so parts aren't counted twice)
+              </label>
+            </div>
+
+            <div>
+              <div class="lbl">Columns to show</div>
+              <div class="chips" id="colChips"></div>
+              <div style="margin-top:8px;max-width:420px;position:relative;">
+                <input class="f-inp" id="colAdd" placeholder="＋ Add a column: type a property name…" autocomplete="off" data-pp="column">
+              </div>
+            </div>
+
+            <div>
+              <div class="lbl">Calculated columns</div>
+              <div class="help" style="margin-bottom:8px;">Use column names in square brackets with <code>+ − × ÷</code> (<code>+ - * /</code>), brackets and <code>ROUND(x, 2)</code>, <code>ABS</code>, <code>MIN</code>, <code>MAX</code>, <code>SQRT</code>. Example: tonnes = <code>[Assembly/Cast unit weight] / 1000</code></div>
+              <div id="calcs" style="display:flex;flex-direction:column;gap:8px;"></div>
+              <div style="margin-top:8px;"><button class="btn-xs" onclick="addCalc()">＋ Add calculated column</button></div>
+            </div>
+
+            <div class="b-row" style="margin-top:4px;">
+              <button class="btn-sm go" id="btnRun" onclick="runSearch()">▶ Run search</button>
+              <button class="btn-sm warn" id="btnRunStop" onclick="searchStop=true" style="display:none;">■ Stop</button>
+              <span class="progress" id="searchProgress"></span>
+            </div>
+            <div class="field-err" id="searchErr" role="alert"></div>
+          </div>
+        </div>
+
+        <div class="panel" id="resultsPanel" style="display:none;">
+          <div class="panel-head">
+            <div class="panel-title">📊 Results<span class="panel-count" id="cntResults"></span></div>
+            <div class="panel-actions">
+              <span class="b-label" style="font-size:11px;">Group by</span>
+              <select class="f-sel" id="groupSel" style="width:auto;max-width:240px;" onchange="setGroup(this.value)"></select>
+              <button class="btn-sm" onclick="exportResultsCsv()">⬇ CSV</button>
+            </div>
+          </div>
+          <div class="panel-body"><div class="tiles" id="tiles"></div></div>
+          <div class="tbl-wrap"><table>
+            <thead><tr id="thResults"></tr></thead>
+            <tbody id="tbResults"></tbody>
+            <tfoot><tr id="tfResults"></tr></tfoot>
+          </table></div>
+          <div class="pager" id="pager"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- Property picker (shared dropdown) -->
+<div class="pp" id="pp" role="listbox"></div>
+
+<!-- Approve one model -->
+<div class="overlay" id="approveDlg">
+  <div class="dialog">
+    <h3>Add to baseline</h3>
+    <p id="approveFile"></p>
+    <label for="approveText">File name must contain</label>
+    <input class="f-inp" id="approveText" maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter')confirmApprove()">
+    <label for="approveLabel">Label (optional)</label>
+    <input class="f-inp" id="approveLabel" maxlength="120" autocomplete="off" placeholder="e.g. Structure – Block A" onkeydown="if(event.key==='Enter')confirmApprove()">
+    <div class="field-err" id="approveErr"></div>
+    <div class="row">
+      <button class="btn-ghost" onclick="closeDlg('approveDlg')">Cancel</button>
+      <button class="btn-primary" id="approveBtn" onclick="confirmApprove()">✔ Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit baseline -->
+<div class="overlay" id="baselineDlg">
+  <div class="big-box" style="max-width:860px;">
+    <div class="big-head">
+      <div class="big-title">✎ Edit baseline</div>
+      <button class="big-close" onclick="closeDlg('baselineDlg')" aria-label="Close">✕</button>
+    </div>
+    <div class="big-body">
+      <div>
+        <div class="lbl">Paste required models</div>
+        <div class="help" style="margin-bottom:8px;">One per line. Each line is a piece of text the model's file name must contain (not case-sensitive), e.g. <code>nNSHS_ST_A_SHP-TE_IFC</code>. To add a label, put it after a <code>|</code> (e.g. <code>nNSHS_AR_C_CULTURE | Architecture – Culture</code>).</div>
+        <textarea class="f-inp" id="blPaste" placeholder="nNSHS_ST_A_SHP-TE_IFC&#10;nNSHS_AR_C_CULTURE | Architecture – Culture"></textarea>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+          <button class="btn-sm go" id="blAddBtn" onclick="addPasted()">＋ Add to baseline</button>
+          <span class="field-err" id="blErr" style="margin:0;"></span>
+        </div>
+      </div>
+      <div>
+        <div class="lbl">Current baseline <span class="panel-count" id="blCount"></span></div>
+        <div class="box-tbl"><table>
+          <thead><tr><th>File name contains</th><th>Label</th><th>Matches</th><th></th></tr></thead>
+          <tbody id="tbBl"></tbody>
+        </table></div>
+      </div>
+    </div>
+    <div class="big-foot">
+      <div class="foot-note">Changes apply straight away. The check updates when you close this window.</div>
+      <button class="btn-primary" onclick="closeDlg('baselineDlg')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage projects -->
+<div class="overlay" id="manageDlg">
+  <div class="big-box">
+    <div class="big-head">
+      <div class="big-title">🗂️ Manage Projects</div>
+      <button class="big-close" onclick="closeManage()" aria-label="Close">✕</button>
+    </div>
+    <div class="big-body">
+      <div class="chips" id="mgTabs">
+        <span class="chip active" data-tab="projects" onclick="setMgTab('projects')">Projects</span>
+        <span class="chip" data-tab="accounts" onclick="setMgTab('accounts')">Revizto accounts</span>
+      </div>
+      <div id="mgNotice"></div>
+      <div id="mgListView">
+        <div class="box-tbl" style="max-height:55vh;"><table>
+          <thead><tr><th>Project</th><th>Revizto project</th><th>Status</th><th></th></tr></thead>
+          <tbody id="mgBody"></tbody>
+        </table></div>
+      </div>
+      <div id="mgFormView" style="display:none;">
+        <div class="lbl">1. Revizto project</div>
+        <input class="f-inp" id="mgRvFilter" type="search" placeholder="Search Revizto projects…" autocomplete="off" style="margin-bottom:6px;">
+        <select class="f-sel list" id="mgRvSel" size="10"></select>
+        <div class="help" id="mgRvHint" style="margin-top:4px;"></div>
+        <div id="mgRvIssues"></div>
+        <div class="lbl" style="margin-top:14px;">2. Name shown on the pages</div>
+        <input class="f-inp" id="mgName" maxlength="80" placeholder="e.g. New Northern Suburbs HS" autocomplete="off">
+        <div class="field-err" id="mgErr" role="alert"></div>
+      </div>
+      <div id="mgAccView" style="display:none;">
+        <div class="box-tbl" style="max-height:34vh;"><table>
+          <thead><tr><th>Revizto account</th><th>Client ID</th><th>Sign-in</th><th>Projects</th><th></th></tr></thead>
+          <tbody id="mgAccBody"></tbody>
+        </table></div>
+        <div class="lbl" style="margin-top:16px;">Add a Revizto account</div>
+        <div class="help" style="margin-bottom:10px;">
+          A Revizto app only works for licences in the account it was created in. For each other account that holds a licence:
+          <ol>
+            <li>In Revizto Workspace, switch to that account, then <strong>Tools → Manage account info → Developer Portal → Add custom app</strong> (Account Owner or Admin).</li>
+            <li>Redirect URI: <code id="mgRedirect"></code> <button class="link-btn" onclick="copyRedirect()">Copy</button>. Copy the client ID and the client secret (the secret is shown only once).</li>
+            <li>Add them below, then click <strong>Connect</strong> and sign in to Revizto.</li>
+          </ol>
+        </div>
+        <div class="acc-grid">
+          <input class="f-inp" id="accLabel" maxlength="60" placeholder="Name, e.g. Morialta R+" autocomplete="off">
+          <input class="f-inp" id="accClientId" placeholder="Client ID" autocomplete="off" spellcheck="false">
+          <input class="f-inp" id="accSecret" type="password" placeholder="Client secret" autocomplete="new-password" spellcheck="false">
+          <button class="btn-sm go" id="accAddBtn" onclick="addAccount()">＋ Add</button>
+        </div>
+        <div class="field-err" id="accErr" role="alert"></div>
+      </div>
+    </div>
+    <div class="big-foot">
+      <div class="foot-note" id="mgFoot"></div>
+      <button class="btn-ghost" id="mgCancel" onclick="showMgList()" style="display:none;">Cancel</button>
+      <button class="btn-primary" id="mgPrimary" onclick="mgPrimaryAction()">＋ Add Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save search -->
+<div class="overlay" id="saveDlg">
+  <div class="dialog">
+    <h3>Save search</h3>
+    <p>Saved searches can be used in every project. The model you searched in isn't saved.</p>
+    <label for="saveName">Name</label>
+    <input class="f-inp" id="saveName" maxlength="80" autocomplete="off" placeholder="e.g. Structural steel – tonnage" onkeydown="if(event.key==='Enter')confirmSave()">
+    <div class="field-err" id="saveErr"></div>
+    <div class="row">
+      <button class="btn-ghost" onclick="closeDlg('saveDlg')">Cancel</button>
+      <button class="btn-primary" id="saveBtn" onclick="confirmSave()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Settings and state ─────────────────────────────────────────
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+};
+const SIGNED_OUT = 'signed-out';
+const TYPE_LABEL = { 1: 'Integer', 2: 'Number', 3: 'Yes/No', 4: 'Text', 5: 'Text', 6: 'Date', 7: 'Length (m)', 8: 'Angle (°)', 9: 'Area (m²)', 10: 'Volume (m³)' };
+const kindOf = t => ([4, 5].includes(t) ? 'text' : [1, 2, 7, 8, 9, 10].includes(t) ? 'number' : t === 3 ? 'bool' : null);
+const OPS = {
+  text: [['equal', 'is'], ['notEqual', 'is not'], ['contains', 'contains'], ['notContains', 'does not contain'], ['anyOf', 'is any of'], ['noneOf', 'is none of']],
+  number: [['equal', '='], ['notEqual', '≠'], ['greaterThan', '>'], ['greaterThanOrEqual', '≥'], ['lowerThan', '<'], ['lowerThanOrEqual', '≤'], ['between', 'between'], ['anyOf', 'is any of'], ['noneOf', 'is none of']],
+  bool: [['equal', 'is'], ['notEqual', 'is not']]
+};
+const PAGE_ROWS = 100;
+const MAX_ROWS = 250000;
+
+let role = null;
+let projects = [];
+let currentProject = null;
+let reviztoConns = [];
+let ov = null;                 // the latest overview from the server
+let modelById = new Map();
+let tab = store.get('od_tab') || 'models';
+let loading = false;
+let baselineFilter = '';       // '', 'missing', 'found'
+let countsFilter = '';         // '', 'drop', 'need', 'baseline'
+let countsSort = { key: 'flag', dir: 1 };
+let selectedModel = null;
+let showIgnored = false;
+let counting = false, countStop = false;
+
+// ── Small helpers ──────────────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function toast(msg, color) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.background = color || '#7c3aed';
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 3600);
+}
+function notice(kind, html) { $('notice').innerHTML = html ? `<div class="notice ${kind}">${html}</div>` : ''; }
+function openDlg(id) { $(id).classList.add('show'); }
+function closeDlg(id) {
+  $(id).classList.remove('show');
+  if (id === 'baselineDlg' && blChanged) { blChanged = false; loadOverview(); }
+}
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function fmtLocal(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleString('en-AU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function ago(iso) {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (isNaN(mins)) return '';
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  if (h < 48) return `${h} h ago`;
+  return `${Math.round(h / 24)} days ago`;
+}
+function fmtNum(n, dp = 0) {
+  if (n === null || n === undefined || !Number.isFinite(Number(n))) return '—';
+  return Number(n).toLocaleString('en-AU', { maximumFractionDigits: dp, minimumFractionDigits: 0 });
+}
+function smartNum(n) {
+  if (!Number.isFinite(n)) return '—';
+  const a = Math.abs(n);
+  return fmtNum(n, a >= 1000 ? 1 : a >= 1 ? 2 : 4);
+}
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch {}
+  ta.remove();
+}
+function downloadCsv(name, rows) {
+  const csv = rows.map(r => r.map(v => {
+    const s = v === null || v === undefined ? '' : String(v);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function safeName(s) { return String(s || 'export').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'export'; }
+
+// ── API calls ──────────────────────────────────────────────────
+async function api(path, options = {}) {
+  const r = await fetch(path, {
+    ...options,
+    headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) }
+  });
+  let body = null;
+  try { body = await r.json(); } catch {}
+  if (r.status === 401) { location.replace('/?expired=1'); throw new Error(SIGNED_OUT); }
+  if (r.status === 403) { location.replace('/home?admin=1'); throw new Error(SIGNED_OUT); }
+  if (!r.ok || !body || body.ok === false) {
+    const e = new Error((body && (body.error || body.message)) || `Request failed (HTTP ${r.status})`);
+    e.body = body;
+    throw e;
+  }
+  return body;
+}
+const post = (op, data) => api(`/api/od?op=${op}`, { method: 'POST', body: JSON.stringify({ project: currentProject && currentProject.key, ...data }) });
+
+async function signOut() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch {}
+  location.replace('/?signedout=1');
+}
+
+// ── Start up ───────────────────────────────────────────────────
+async function loadProjects(selectKey) {
+  showIdle('Loading…', '');
+  try {
+    const data = await api('/api/projects');
+    projects = data.projects || [];
+    role = data.session?.role || 'admin';
+    $('roleBadge').textContent = role === 'admin' ? 'Admin' : 'Team';
+    $('roleBadge').className = 'role-badge' + (role === 'admin' ? ' admin' : '');
+    reviztoConns = (data.revizto && data.revizto.connections) || [];
+    if (data.needsSetup) {
+      notice('warn', 'The database tables aren\'t set up yet. In Supabase, open <strong>SQL Editor</strong>, paste <code>sql/01-setup.sql</code> and click <strong>Run</strong>, then reload this page.');
+    }
+    fillProjectSelect(selectKey || new URLSearchParams(location.search).get('project'));
+    showReviztoStatus();
+    if (!currentProject) { showNoProjects(); return; }
+    await loadOverview();
+  } catch (e) {
+    if (e.message !== SIGNED_OUT) showIdle('Could not load', esc(e.message));
+  }
+}
+
+function fillProjectSelect(preferKey) {
+  const sel = $('projectSel');
+  sel.innerHTML = projects.map(p => `<option value="${esc(p.key)}">${esc(p.name)}</option>`).join('') || '<option value="">No projects</option>';
+  sel.disabled = projects.length < 2;
+  const remembered = store.get('od_project');
+  currentProject = projects.find(p => p.key === preferKey) || projects.find(p => p.key === remembered) || projects[0] || null;
+  if (currentProject) {
+    sel.value = currentProject.key;
+    store.set('od_project', currentProject.key);
+    history.replaceState(null, '', `${location.pathname}?project=${encodeURIComponent(currentProject.key)}`);
+  }
+  $('btnReload').disabled = !currentProject;
+}
+$('projectSel').addEventListener('change', () => {
+  currentProject = projects.find(p => p.key === $('projectSel').value) || null;
+  if (!currentProject) return;
+  store.set('od_project', currentProject.key);
+  history.replaceState(null, '', `${location.pathname}?project=${encodeURIComponent(currentProject.key)}`);
+  selectedModel = null;
+  results = null;
+  $('resultsPanel').style.display = 'none';
+  showReviztoStatus();
+  loadOverview();
+});
+
+function showNoProjects() {
+  ov = null;
+  showIdle('No projects set up', 'Use <strong>Manage Projects</strong> to add your first Revizto project.');
+}
+
+function currentConnId() { return (currentProject && currentProject.reviztoConnection) || 'main'; }
+function showReviztoStatus() {
+  const dot = $('dotRevizto'), lbl = $('lblRevizto');
+  const id = currentConnId();
+  const c = reviztoConns.find(x => x.id === id);
+  const name = c && reviztoConns.length > 1 ? `Revizto (${esc(c.label)})` : 'Revizto';
+  const act = word => ` · <button class="link-btn" onclick="connectRevizto('${esc(id)}')">${word}</button>`;
+  if (c && c.connected) { dot.className = 'status-dot ok'; lbl.innerHTML = `${name}: connected${act('Reconnect')}`; }
+  else if (c) { dot.className = 'status-dot err'; lbl.innerHTML = `${name}: not connected${act('Connect')}`; }
+  else if (!reviztoConns.length) { dot.className = 'status-dot err'; lbl.innerHTML = 'Revizto: not set up (add REVIZTO_CLIENT_ID and REVIZTO_CLIENT_SECRET in Vercel)'; }
+  else { dot.className = 'status-dot err'; lbl.innerHTML = 'Revizto: account removed · edit this project'; }
+}
+function connectRevizto(id) { location.href = `/api/revizto-callback?connection=${encodeURIComponent(id || 'main')}`; }
+
+function showIdle(title, sub) {
+  $('content').style.display = 'none';
+  $('idle').style.display = 'flex';
+  $('idleTitle').textContent = title;
+  $('idleSub').innerHTML = sub || '';
+}
+
+// ── Overview: models, baseline, counts ─────────────────────────
+async function loadOverview(manual) {
+  if (!currentProject || loading) return;
+  loading = true;
+  const btn = $('btnReload');
+  btn.disabled = true; btn.classList.add('busy');
+  $('lblReload').textContent = 'Loading from Revizto…';
+  if (!ov) showIdle('Loading models from Revizto…', 'This usually takes a few seconds.');
+  try {
+    const d = await api(`/api/od?op=overview&project=${encodeURIComponent(currentProject.key)}`);
+    ov = d;
+    modelById = new Map(d.models.map(m => [m.modelId, m]));
+    if (currentProject.settings) currentProject.settings = d.project.settings;
+    notice('', '');
+    renderAll();
+    $('idle').style.display = 'none';
+    $('content').style.display = 'flex';
+    if (manual) toast('Reloaded from Revizto', '#1d4ed8');
+  } catch (e) {
+    if (e.message === SIGNED_OUT) return;
+    const b = e.body || {};
+    if (b.reviztoNeedsSignIn) {
+      const c = reviztoConns.find(x => x.id === currentConnId());
+      if (c) c.connected = false;
+      showReviztoStatus();
+      const msg = `Revizto needs to be connected before the models can load. <button class="link-btn" onclick="connectRevizto('${esc(currentConnId())}')">Connect Revizto</button>`;
+      if (ov) notice('warn', msg); else { showIdle('Revizto is not connected', msg); }
+    } else if (ov) {
+      notice('err', `Could not reload: ${esc(e.message)}`);
+    } else {
+      showIdle('Could not load', esc(e.message));
+    }
+  } finally {
+    loading = false;
+    btn.disabled = !currentProject; btn.classList.remove('busy');
+    $('lblReload').textContent = '↻ Reload from Revizto';
+  }
+}
+
+function renderAll() {
+  renderDataStatus();
+  renderModelsTab();
+  renderCountsTab();
+  fillScope();
+  setTab(tab);
+}
+
+function renderDataStatus() {
+  const s = ov.status || {};
+  const dot = $('dotData'), lbl = $('lblData');
+  if (!s.objectAccess) {
+    dot.className = 'status-dot err';
+    lbl.innerHTML = 'Revizto data: <strong>object access is off</strong>. In Revizto: Project info → Extended API access → tick "Enable API access to object properties".';
+  } else if (s.objectsReady) {
+    dot.className = 'status-dot ok';
+    lbl.innerHTML = `Revizto data: <strong>up to date</strong> · version ${esc(s.version ?? '—')}, ${esc(fmtLocal(s.completedAt))}`;
+  } else {
+    dot.className = 'status-dot busy';
+    lbl.innerHTML = `Revizto data: <strong>${s.objectsStatus === 'ERROR' ? 'last update had errors' : 'still processing'}</strong>${s.objectsProgress ? ` (${s.objectsProgress}%)` : ''} · counts wait until it's done`;
+  }
+  $('dotLoaded').className = 'status-dot ok';
+  $('lblLoaded').textContent = fmtLocal(ov.loadedAt);
+  $('sideHelp').innerHTML = {
+    models: 'Each baseline line is text a model\'s file name must contain. Missing models are flagged red; models not in the baseline are flagged until you approve or ignore them.',
+    counts: `Count each model file after it syncs. A drop of <strong>${esc(ov.kpis.threshold)}%</strong> or more against its previous count is flagged red: often a wrong 3D view was exported.`,
+    search: 'Build a search like a Revizto search set, pick the properties to show, then add totals and formulas. Save it to reuse in any project.'
+  }[tab] || '';
+}
+
+function setTab(t) {
+  tab = ['models', 'counts', 'search'].includes(t) ? t : 'models';
+  store.set('od_tab', tab);
+  document.querySelectorAll('#tabs .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === `view-${tab}`));
+  if (ov) renderDataStatus();
+  if (tab === 'counts' && selectedModel) requestAnimationFrame(() => drawChart());
+  if (tab === 'search' && !searchesLoaded) loadSaved(true);
+}
+
+// ── Models & sync tab ──────────────────────────────────────────
+function renderModelsTab() {
+  const k = ov.kpis;
+  $('kReq').textContent = fmtNum(k.required);
+  $('kFound').textContent = fmtNum(k.found);
+  $('kFoundSub').textContent = k.duplicates ? `in Revizto · ${k.duplicates} loaded in more than one place` : 'in Revizto';
+  $('kMiss').textContent = fmtNum(k.missing);
+  $('kNew').textContent = fmtNum(k.notInBaseline);
+  $('kModels').textContent = fmtNum(k.models);
+  $('kModelsSub').textContent = `in ${k.scenes} scene${k.scenes === 1 ? '' : 's'}${k.ignored ? ` · ${k.ignored} ignored` : ''}`;
+  const flags = k.missing + k.notInBaseline;
+  $('bdgModels').textContent = flags ? String(flags) : '';
+  $('bdgModels').className = 'badge' + (k.missing ? '' : ' amber');
+
+  const chips = [['', 'All'], ['missing', `Missing (${k.missing})`], ['found', `Found (${k.found})`]];
+  $('chipBaseline').innerHTML = chips.map(([v, l]) => `<span class="chip${baselineFilter === v ? ' active' : ''}" data-v="${v}">${esc(l)}</span>`).join('');
+  $('chipBaseline').querySelectorAll('.chip').forEach(c => c.onclick = () => { baselineFilter = c.dataset.v; renderModelsTab(); });
+
+  // Baseline check
+  const order = { missing: 0, duplicate: 1, found: 2 };
+  const rows = ov.baseline
+    .filter(r => !baselineFilter || (baselineFilter === 'missing' ? r.status === 'missing' : r.status !== 'missing'))
+    .slice().sort((a, b) => order[a.status] - order[b.status] || a.text.localeCompare(b.text));
+  $('cntBaseline').textContent = `${rows.length} of ${ov.baseline.length}`;
+  if (!ov.baseline.length) {
+    $('tbBaseline').innerHTML = `<tr><td colspan="6"><div class="empty"><strong>No baseline yet</strong>Click <em>Edit baseline</em> to paste your list of required model files, or approve models from the list below.</div></td></tr>`;
+  } else if (!rows.length) {
+    $('tbBaseline').innerHTML = `<tr><td colspan="6"><div class="empty">Nothing to show with this filter.</div></td></tr>`;
+  } else {
+    $('tbBaseline').innerHTML = rows.map(r => {
+      const pill = r.status === 'missing' ? '<span class="pill p-bad">✕ Missing</span>'
+        : r.status === 'duplicate' ? `<span class="pill p-ok" title="This file is loaded in ${r.models.length} places (e.g. linked into several containers).">✓ Found ×${r.models.length}</span>`
+        : '<span class="pill p-ok">✓ Found</span>';
+      const ms = r.models.map(id => modelById.get(id)).filter(Boolean);
+      const text = `<td class="mono wrap">${esc(r.text)}${r.label ? `<div class="sub" style="font-family:Arial">${esc(r.label)}</div>` : ''}</td>`;
+      if (ms.length) {
+        return `<tr><td>${pill}</td>${text}
+          <td class="wrap">${ms.map(m => esc(m.fileName)).join('<br>')}</td>
+          <td class="wrap">${ms.map(m => esc(m.sceneLabel || m.sceneName)).join('<br>')}</td>
+          <td class="nowrap">${ms.map(m => `${esc(fmtDate(m.lastSynced))} <span class="sub" style="display:inline">${esc(ago(m.lastSynced))}</span>`).join('<br>')}</td>
+          <td class="nowrap">${ms.map(m => esc(m.lastSyncedBy || '—')).join('<br>')}</td></tr>`;
+      }
+      if (r.scenes.length) {
+        return `<tr><td>${pill}</td>${text}
+          <td class="wrap">${r.scenes.map(s => `${esc(s.name)} <span class="sub" style="display:inline">(scene)</span>`).join('<br>')}</td>
+          <td>—</td>
+          <td class="nowrap">${r.scenes.map(s => esc(fmtDate(s.lastSynced))).join('<br>')}</td>
+          <td class="nowrap">${r.scenes.map(s => esc(s.lastSyncedBy || '—')).join('<br>')}</td></tr>`;
+      }
+      return `<tr><td>${pill}</td>${text}<td colspan="4" style="color:#f87171">No model file contains this text</td></tr>`;
+    }).join('');
+  }
+
+  // Not in baseline
+  const fresh = ov.models.filter(m => m.inBaseline === 'new').sort((a, b) => a.fileName.localeCompare(b.fileName));
+  $('cntNew').textContent = fresh.length ? String(fresh.length) : '';
+  if (!fresh.length) {
+    $('tbNew').innerHTML = `<tr><td colspan="6"><div class="empty"><strong>Nothing unexpected</strong>Every model in Revizto matches the baseline${ov.kpis.ignored ? ' or is ignored' : ''}.</div></td></tr>`;
+  } else {
+    $('tbNew').innerHTML = fresh.map(m => `<tr>
+        <td><input type="checkbox" class="cbNew" value="${esc(m.modelId)}" onchange="updateApproveBtn()"></td>
+        <td class="wrap"><strong>${esc(m.fileName)}</strong>${m.label && m.label !== m.fileName ? `<div class="sub">${esc(m.label)}</div>` : ''}</td>
+        <td class="wrap">${esc(m.sceneLabel || m.sceneName)}</td>
+        <td class="nowrap">${esc(fmtDate(m.lastSynced))}<div class="sub">${esc(ago(m.lastSynced))}</div></td>
+        <td class="nowrap">${esc(m.lastSyncedBy || '—')}</td>
+        <td class="nowrap" style="text-align:right"><button class="btn-xs ok" data-approve="${esc(m.modelId)}">✔ Approve</button> <button class="btn-xs ghost" data-ignore="${esc(m.modelId)}">Ignore</button></td>
+      </tr>`).join('');
+    $('tbNew').querySelectorAll('[data-approve]').forEach(b => b.onclick = () => openApprove(b.dataset.approve));
+    $('tbNew').querySelectorAll('[data-ignore]').forEach(b => b.onclick = () => ignoreModel(b.dataset.ignore));
+  }
+  $('cbAllNew').checked = false;
+  updateApproveBtn();
+
+  // Ignored entries
+  const ig = ov.ignoredEntries || [];
+  $('btnIgnoredToggle').textContent = showIgnored ? 'Hide ignored' : `Show ignored (${ig.length})`;
+  $('btnIgnoredToggle').disabled = !ig.length && !showIgnored;
+  $('ignoredBox').style.display = showIgnored ? 'block' : 'none';
+  $('tbIgnored').innerHTML = ig.length ? ig.map(e => `<tr><td class="mono wrap">${esc(e.text)}</td><td style="text-align:right;width:1%"><button class="btn-xs" data-unignore="${e.id}">Stop ignoring</button></td></tr>`).join('')
+    : '<tr><td style="color:#64748b">Nothing ignored.</td></tr>';
+  $('tbIgnored').querySelectorAll('[data-unignore]').forEach(b => b.onclick = () => removeEntry(Number(b.dataset.unignore), 'Stopped ignoring'));
+}
+
+function toggleIgnored() { showIgnored = !showIgnored; renderModelsTab(); }
+function toggleAllNew(on) { document.querySelectorAll('.cbNew').forEach(c => { c.checked = on; }); updateApproveBtn(); }
+function updateApproveBtn() {
+  const n = document.querySelectorAll('.cbNew:checked').length;
+  $('btnApproveSel').disabled = !n;
+  $('btnApproveSel').textContent = n ? `✔ Approve selected (${n})` : '✔ Approve selected';
+}
+
+let approving = null;
+function openApprove(modelId) {
+  const m = modelById.get(modelId);
+  if (!m) return;
+  approving = m;
+  $('approveFile').innerHTML = `Model file: <strong style="color:#f9fafb">${esc(m.fileName)}</strong><br>Keep only the part of the name that stays the same between uploads, so new revisions still match.`;
+  $('approveText').value = m.suggest || m.fileName;
+  $('approveLabel').value = m.label && m.label !== m.fileName ? m.label : '';
+  $('approveErr').textContent = '';
+  openDlg('approveDlg');
+  setTimeout(() => $('approveText').focus(), 50);
+}
+async function confirmApprove() {
+  const text = $('approveText').value.trim();
+  if (!text) { $('approveErr').textContent = 'Enter the text the file name must contain.'; return; }
+  if (approving && !approving.fileName.toLowerCase().includes(text.toLowerCase())) {
+    $('approveErr').textContent = 'The model\'s file name doesn\'t contain that text, so it would still show as missing.';
+    return;
+  }
+  $('approveBtn').disabled = true;
+  try {
+    await post('baseline-add', { status: 'required', entries: [{ text, label: $('approveLabel').value.trim() }] });
+    closeDlg('approveDlg');
+    toast('Added to the baseline', '#16a34a');
+    await loadOverview();
+  } catch (e) {
+    if (e.message !== SIGNED_OUT) $('approveErr').textContent = e.message;
+  } finally { $('approveBtn').disabled = false; }
+}
+async function approveSelected() {
+  const ids = [...document.querySelectorAll('.cbNew:checked')].map(c => c.value);
+  const ms = ids.map(id => modelById.get(id)).filter(Boolean);
+  if (!ms.length) return;
+  const entries = ms.map(m => ({ text: m.suggest || m.fileName, label: m.label && m.label !== m.fileName ? m.label : '' }));
+  const preview = entries.slice(0, 12).map(e => `• ${e.text}`).join('\n') + (entries.length > 12 ? `\n…and ${entries.length - 12} more` : '');
+  if (!confirm(`Add ${entries.length} model${entries.length > 1 ? 's' : ''} to the baseline using this text?\n\n${preview}\n\nYou can edit any of them later under Edit baseline.`)) return;
+  try {
+    const d = await post('baseline-add', { status: 'required', entries });
+    toast(`Added ${d.added} to the baseline${d.skipped ? ` (${d.skipped} already there)` : ''}`, '#16a34a');
+    await loadOverview();
+  } catch (e) { if (e.message !== SIGNED_OUT) toast(e.message, '#dc2626'); }
+}
+async function ignoreModel(modelId) {
+  const m = modelById.get(modelId);
+  if (!m) return;
+  if (!confirm(`Ignore "${m.fileName}"?\n\nIt won't be flagged as "not in baseline". You can stop ignoring it later.`)) return;
+  try {
+    await post('baseline-add', { status: 'ignored', entries: [{ text: m.fileName }] });
+    toast('Ignored', '#16a34a');
+    await loadOverview();
+  } catch (e) { if (e.message !== SIGNED_OUT) toast(e.message, '#dc2626'); }
+}
+async function removeEntry(id, done) {
+  try {
+    await post('baseline-remove', { id });
+    toast(done || 'Removed', '#16a34a');
+    await loadOverview();
+  } catch (e) { if (e.message !== SIGNED_OUT) toast(e.message, '#dc2626'); }
+}
+function exportBaselineCsv() {
+  const out = [['Status', 'File name contains', 'Label', 'Model in Revizto', 'Scene', 'Last synced', 'Synced by']];
+  for (const r of ov.baseline) {
+    const ms = r.models.map(id => modelById.get(id)).filter(Boolean);
+    const status = r.status === 'missing' ? 'Missing' : r.status === 'duplicate' ? 'Found (more than once)' : 'Found';
+    if (!ms.length) out.push([status, r.text, r.label || '', r.scenes.map(s => s.name).join('; '), '', r.scenes.map(s => fmtDate(s.lastSynced)).join('; '), '']);
+    for (const m of ms) out.push([status, r.text, r.label || '', m.fileName, m.sceneLabel || m.sceneName, fmtDate(m.lastSynced), m.lastSyncedBy || '']);
+  }
+  for (const m of ov.models.filter(x => x.inBaseline === 'new')) out.push(['Not in baseline', '', '', m.fileName, m.sceneLabel || m.sceneName, fmtDate(m.lastSynced), m.lastSyncedBy || '']);
+  downloadCsv(`${safeName(currentProject.name)}_model_check_${new Date().toISOString().slice(0, 10)}.csv`, out);
+}
+
+// Edit baseline window
+let blChanged = false;
+function openBaseline() {
+  $('blPaste').value = '';
+  $('blErr').textContent = '';
+  renderBaselineList();
+  openDlg('baselineDlg');
+}
+function renderBaselineList() {
+  const rows = ov.baseline.slice().sort((a, b) => a.text.localeCompare(b.text));
+  $('blCount').textContent = `(${rows.length})`;
+  $('tbBl').innerHTML = rows.length ? rows.map(r => `<tr>
+      <td class="mono wrap">${esc(r.text)}</td>
+      <td class="wrap">${esc(r.label || '')}</td>
+      <td>${r.status === 'missing' ? '<span class="pill p-bad">None</span>' : `<span class="pill p-ok">${r.models.length || r.scenes.length}</span>`}</td>
+      <td class="nowrap" style="text-align:right"><button class="btn-xs" data-edit="${r.id}">Edit</button> <button class="btn-xs warn" data-del="${r.id}">Remove</button></td>
+    </tr>`).join('') : '<tr><td colspan="4" style="color:#64748b">Empty. Paste your list above.</td></tr>';
+  $('tbBl').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => editEntry(Number(b.dataset.edit)));
+  $('tbBl').querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteEntry(Number(b.dataset.del)));
+}
+async function addPasted() {
+  const lines = $('blPaste').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) { $('blErr').textContent = 'Paste at least one line.'; return; }
+  const entries = lines.map(l => { const [t, ...rest] = l.split('|'); return { text: t.trim(), label: rest.join('|').trim() }; }).filter(e => e.text);
+  $('blAddBtn').disabled = true;
+  try {
+    const d = await post('baseline-add', { status: 'required', entries });
+    $('blPaste').value = '';
+    $('blErr').textContent = '';
+    toast(`Added ${d.added}${d.skipped ? `, ${d.skipped} already in the baseline` : ''}`, '#16a34a');
+    blChanged = false;
+    await loadOverview();
+    renderBaselineList();
+  } catch (e) { if (e.message !== SIGNED_OUT) $('blErr').textContent = e.message; }
+  finally { $('blAddBtn').disabled = false; }
+}
+async function editEntry(id) {
+  const r = ov.baseline.find(x => x.id === id);
+  if (!r) return;
+  const text = prompt('File name must contain:', r.text);
+  if (text === null) return;
+  const label = prompt('Label (optional):', r.label || '');
+  if (label === null) return;
+  try {
+    await post('baseline-edit', { id, text: text.trim(), label: label.trim() });
+    await loadOverview();
+    renderBaselineList();
+  } catch (e) { if (e.message !== SIGNED_OUT) toast(e.message, '#dc2626'); }
+}
+async function deleteEntry(id) {
+  const r = ov.baseline.find(x => x.id === id);
+  if (!r || !confirm(`Remove "${r.text}" from the baseline?`)) return;
+  try {
+    await post('baseline-remove', { id });
+    await loadOverview();
+    renderBaselineList();
+  } catch (e) { if (e.message !== SIGNED_OUT) toast(e.message, '#dc2626'); }
+}
+
+// ── Element counts tab ─────────────────────────────────────────
+function renderCountsTab() {
+  const k = ov.kpis;
+  $('kElems').textContent = fmtNum(k.elements);
+  $('kDrops').textContent = fmtNum(k.drops);
+  $('kDropsSub').textContent = `down ${k.threshold}% or more`;
+  $('kNeed').textContent = fmtNum(k.needCount);
+  $('kRises').textContent = fmtNum(k.rises);
+  $('kTh').textContent = `${k.threshold}%`;
+  $('bdgCounts').textContent = k.drops ? String(k.drops) : k.needCount ? String(k.needCount) : '';
+  $('bdgCounts').className = 'badge' + (k.drops ? '' : ' amber');
+  $('btnCountChanged').textContent = `▶ Count changed (${k.needCount})`;
+  $('btnCountChanged').disabled = counting || !k.needCount;
+  const chips = [['', 'All'], ['drop', `Drops (${k.drops})`], ['need', `Need count (${k.needCount})`], ['baseline', 'Baseline only']];
+  $('chipCounts').innerHTML = chips.map(([v, l]) => `<span class="chip${countsFilter === v ? ' active' : ''}" data-v="${v}">${esc(l)}</span>`).join('');
+  $('chipCounts').querySelectorAll('.chip').forEach(c => c.onclick = () => { countsFilter = c.dataset.v; renderCountsTab(); });
+  renderCounts();
+  if (selectedModel && !modelById.has(selectedModel)) selectedModel = null;
+  if (tab === 'counts') drawChart();
+}
+
+const COUNT_COLS = [
+  ['flag', 'Status'], ['fileName', 'Model file'], ['scene', 'Scene'], ['lastSynced', 'Last synced'],
+  ['count', 'Elements', 'num'], ['previous', 'Previous', 'num'], ['changePct', 'Change', 'num'], ['countedAt', 'Counted'], ['', '']
+];
+function renderCounts() {
+  if (!ov) return;
+  const q = $('countFilter').value.trim().toLowerCase();
+  let rows = ov.models.filter(m =>
+    (!countsFilter || (countsFilter === 'drop' ? m.flag === 'drop' : countsFilter === 'need' ? m.needsCount : m.inBaseline === 'required')) &&
+    (!q || m.fileName.toLowerCase().includes(q) || String(m.sceneLabel || m.sceneName).toLowerCase().includes(q)));
+  const rank = m => m.flag === 'drop' ? 0 : m.needsCount ? 1 : m.flag === 'rise' ? 2 : 3;
+  const val = (m, k) => k === 'flag' ? rank(m) : k === 'scene' ? String(m.sceneLabel || m.sceneName) : k === 'lastSynced' || k === 'countedAt' ? Date.parse(m[k]) || 0 : m[k];
+  const { key, dir } = countsSort;
+  rows = rows.slice().sort((a, b) => {
+    const x = val(a, key), y = val(b, key);
+    if (x === y || (x == null && y == null)) return a.fileName.localeCompare(b.fileName);
+    if (x == null) return 1;
+    if (y == null) return -1;
+    return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y))) * dir;
+  });
+  $('cntCounts').textContent = `${rows.length} of ${ov.models.length}`;
+  $('thCounts').innerHTML = COUNT_COLS.map(([k, l, cls]) => `<th class="${k ? 'sortable' : ''} ${cls || ''}" data-k="${k}">${esc(l)}${k && countsSort.key === k ? `<span class="arrow">${countsSort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('');
+  $('thCounts').querySelectorAll('th.sortable').forEach(th => th.onclick = () => {
+    const k = th.dataset.k;
+    countsSort = { key: k, dir: countsSort.key === k ? -countsSort.dir : 1 };
+    renderCounts();
+  });
+  if (!rows.length) {
+    $('tbCounts').innerHTML = `<tr><td colspan="9"><div class="empty">${ov.models.length ? 'Nothing to show with this filter.' : 'No models in this Revizto project yet.'}</div></td></tr>`;
+    return;
+  }
+  $('tbCounts').innerHTML = rows.map(m => {
+    let pill = '<span class="pill p-ok">OK</span>';
+    if (m.flag === 'drop') pill = `<span class="pill p-bad" title="Down ${Math.abs(m.changePct)}% on the previous count">▼ Drop</span>`;
+    else if (m.count === null) pill = '<span class="pill p-warn">Not counted</span>';
+    else if (m.needsCount) pill = '<span class="pill p-warn">Re-synced</span>';
+    else if (m.flag === 'rise') pill = '<span class="pill p-info">▲ Rise</span>';
+    const ch = m.changePct === null ? (m.count !== null && m.previous === null ? '<span class="sub" style="display:inline">first count</span>' : '—')
+      : `<span style="color:${m.flag === 'drop' ? '#f87171' : m.changePct < 0 ? '#fca5a5' : m.changePct > 0 ? '#86efac' : '#94a3b8'};font-weight:bold">${m.changePct > 0 ? '+' : ''}${fmtNum(m.changePct, 1)}%</span><div class="sub">${m.change > 0 ? '+' : ''}${fmtNum(m.change)}</div>`;
+    return `<tr class="clickable${selectedModel === m.modelId ? ' sel' : ''}" data-id="${esc(m.modelId)}">
+      <td>${pill}${m.inBaseline === 'required' ? '' : m.inBaseline === 'new' ? '<div class="sub">not in baseline</div>' : '<div class="sub">ignored</div>'}</td>
+      <td class="wrap"><strong>${esc(m.fileName)}</strong></td>
+      <td class="wrap">${esc(m.sceneLabel || m.sceneName)}</td>
+      <td class="nowrap">${esc(fmtDate(m.lastSynced))}<div class="sub">${esc(m.lastSyncedBy || '')}</div></td>
+      <td class="num mono">${m.count === null ? '—' : fmtNum(m.count)}</td>
+      <td class="num mono">${m.previous === null ? '—' : fmtNum(m.previous)}</td>
+      <td class="num">${ch}</td>
+      <td class="nowrap">${m.countedAt ? `${esc(fmtDate(m.countedAt))}<div class="sub">${esc(ago(m.countedAt))}</div>` : '—'}</td>
+      <td style="text-align:right"><button class="btn-xs${m.needsCount ? ' ok' : ''}" data-count="${esc(m.modelId)}" ${counting ? 'disabled' : ''}>${m.count === null ? '▶ Count' : '↻ Count'}</button></td>
+    </tr>`;
+  }).join('');
+  $('tbCounts').querySelectorAll('tr[data-id]').forEach(tr => tr.onclick = e => {
+    if (e.target.closest('button')) return;
+    selectedModel = tr.dataset.id;
+    $('tbCounts').querySelectorAll('tr.sel').forEach(x => x.classList.remove('sel'));
+    tr.classList.add('sel');
+    drawChart();
+  });
+  $('tbCounts').querySelectorAll('[data-count]').forEach(b => b.onclick = () => countModels([b.dataset.count]));
+}
+
+async function changeThreshold() {
+  const cur = ov ? ov.kpis.threshold : 10;
+  const v = prompt('Flag a model when its element count drops by this percentage or more:', String(cur));
+  if (v === null) return;
+  const n = Number(String(v).replace('%', '').trim());
+  if (!Number.isFinite(n) || n < 1 || n > 90) { toast('Enter a number between 1 and 90', '#dc2626'); return; }
+  try {
+    await post('settings', { dropThreshold: n });
+    toast(`Alert level set to ${n}%`, '#16a34a');
+    await loadOverview();
+  } catch (e) { if (e.message !== SIGNED_OUT) toast(e.message, '#dc2626'); }
+}
+
+// Counting: each model is counted on the server in steps; the page keeps asking until done
+function countChanged() {
+  const ids = ov.models.filter(m => m.needsCount).map(m => m.modelId);
+  if (ids.length) countModels(ids);
+}
+function stopCounting() { countStop = true; $('btnCountStop').textContent = 'Stopping…'; }
+async function countModels(ids) {
+  if (counting || !ov) return;
+  if (ov.status && !ov.status.objectAccess) { notice('warn', 'Revizto isn\'t sharing object data for this project. In Revizto, open <strong>Project info → Extended API access</strong> and tick <strong>Enable API access to object properties</strong>, then reload.'); return; }
+  counting = true; countStop = false;
+  $('btnCountChanged').disabled = true;
+  $('btnCountStop').style.display = ids.length > 1 ? '' : 'none';
+  $('btnCountStop').textContent = '■ Stop';
+  const prog = $('countProgress');
+  prog.style.display = 'block';
+  renderCounts();
+  let done = 0, failed = 0, drops = [];
+  try {
+    for (let i = 0; i < ids.length; i++) {
+      if (countStop) break;
+      const m = modelById.get(ids[i]);
+      if (!m) continue;
+      const label = `${ids.length > 1 ? `${i + 1} of ${ids.length}: ` : ''}${m.fileName}`;
+      prog.innerHTML = `<span class="spinner" style="display:inline-block;vertical-align:-2px;margin-right:8px;"></span>Counting ${esc(label)}…`;
+      try {
+        let r = await post('count', { sceneId: m.sceneId, modelId: m.modelId });
+        while (!r.done) {
+          prog.innerHTML = `<span class="spinner" style="display:inline-block;vertical-align:-2px;margin-right:8px;"></span>Counting ${esc(label)}… ${fmtNum(r.soFar)} so far`;
+          r = await post('count', { job: r.job });
+        }
+        done++;
+      } catch (e) {
+        if (e.message === SIGNED_OUT) return;
+        failed++;
+        notice('err', `Could not count ${esc(m.fileName)}: ${esc(e.message)}`);
+        if (e.body && (e.body.reviztoNeedsSignIn || /still processing|isn't sharing/i.test(e.message))) break;
+      }
+    }
+  } finally {
+    counting = false;
+    $('btnCountStop').style.display = 'none';
+    prog.style.display = 'none';
+  }
+  await loadOverview();
+  if (ov) drops = ids.map(id => modelById.get(id)).filter(m => m && m.flag === 'drop');
+  if (drops.length) {
+    notice('err', `<strong>⚠ Element count dropped</strong> in ${drops.map(m => `${esc(m.fileName)} (${fmtNum(m.changePct, 1)}%)`).join(', ')}. Check the 3D view that was exported.`);
+    if (ids.length === 1) { selectedModel = drops[0].modelId; renderCounts(); drawChart(); }
+  }
+  if (done) toast(`Counted ${done} model${done > 1 ? 's' : ''}${failed ? `, ${failed} failed` : ''}${countStop ? ' (stopped)' : ''}`, failed ? '#b45309' : '#16a34a');
+}
+
+// ── Chart: element count over time for one model ───────────────
+const SVGNS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function niceStep(range, ticks) {
+  const raw = range / Math.max(1, ticks);
+  const mag = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+  const f = raw / mag;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * mag;
+}
+function drawChart() {
+  const wrap = $('chartWrap');
+  const meta = $('chartMeta');
+  const m = selectedModel && modelById.get(selectedModel);
+  if (!m) {
+    $('chartTitle').textContent = '📈 Element count over time';
+    $('chartHint').textContent = 'Pick a model in the table below.';
+    wrap.innerHTML = '<div class="empty"><strong>No model picked</strong>Click a row in the table below to see its element count over time.</div>';
+    meta.innerHTML = '';
+    return;
+  }
+  $('chartTitle').textContent = `📈 ${m.fileName}`;
+  $('chartHint').textContent = 'Element count at each sync';
+  const pts = (m.history || []).map(p => ({ t: Date.parse(p.t), c: Number(p.c), at: p.at, f: p.f })).filter(p => Number.isFinite(p.t));
+  meta.innerHTML = [
+    `Scene: <b>${esc(m.sceneLabel || m.sceneName)}</b>`,
+    `Last synced: <b>${esc(fmtLocal(m.lastSynced))}</b>${m.lastSyncedBy ? ` by ${esc(m.lastSyncedBy)}` : ''}`,
+    m.inBaseline === 'required' ? `Baseline: <b>${esc(m.baselineText)}</b>` : `Baseline: <b>${m.inBaseline === 'new' ? 'not in baseline' : 'ignored'}</b>`,
+    `Revizto Id: <b>${esc(m.modelId)}</b>`
+  ].map(s => `<span>${s}</span>`).join('');
+  if (!pts.length) {
+    wrap.innerHTML = `<div class="empty"><strong>Not counted yet</strong><button class="btn-sm go" style="margin-top:8px" onclick="countModels(['${esc(m.modelId)}'])">▶ Count this model</button></div>`;
+    return;
+  }
+  const th = ov.kpis.threshold;
+  wrap.innerHTML = '';
+  const W = Math.max(320, wrap.clientWidth - 24), H = 270;
+  const pad = { l: 64, r: 86, t: 22, b: 34 };
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Element count over time for ${m.fileName}` }, wrap);
+  let x0 = Math.min(...pts.map(p => p.t)), x1 = Math.max(...pts.map(p => p.t));
+  if (x1 - x0 < 86400000) { x0 -= 3 * 86400000; x1 += 3 * 86400000; }
+  const maxC = Math.max(...pts.map(p => p.c), 1);
+  const step = niceStep(maxC, 4);
+  const yMax = Math.ceil((maxC * 1.08) / step) * step;
+  const X = t => pad.l + ((t - x0) / (x1 - x0)) * (W - pad.l - pad.r);
+  const Y = c => pad.t + (1 - c / yMax) * (H - pad.t - pad.b);
+
+  // Grid and y ticks (hairline, recessive)
+  for (let v = 0; v <= yMax + 1e-9; v += step) {
+    svgEl('line', { x1: pad.l, x2: W - pad.r, y1: Y(v), y2: Y(v), stroke: '#2b3a55', 'stroke-width': 1 }, svg);
+    const tx = svgEl('text', { x: pad.l - 8, y: Y(v) + 4, 'text-anchor': 'end', fill: '#64748b', 'font-size': 10 }, svg);
+    tx.textContent = fmtNum(v);
+  }
+  // X ticks: first, last and up to 3 between
+  const span = x1 - x0;
+  const fmtX = t => new Date(t).toLocaleDateString('en-AU', span > 300 * 86400000 ? { month: 'short', year: '2-digit' } : { day: 'numeric', month: 'short' });
+  const nT = Math.min(5, Math.max(2, Math.floor((W - pad.l - pad.r) / 110)));
+  for (let i = 0; i < nT; i++) {
+    const t = x0 + (span * i) / (nT - 1);
+    const tx = svgEl('text', { x: X(t), y: H - pad.b + 18, 'text-anchor': i === 0 ? 'start' : i === nT - 1 ? 'end' : 'middle', fill: '#64748b', 'font-size': 10 }, svg);
+    tx.textContent = fmtX(t);
+  }
+  // Area wash + line
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.t).toFixed(1)},${Y(p.c).toFixed(1)}`).join(' ');
+  if (pts.length > 1) {
+    svgEl('path', { d: `${line} L${X(pts[pts.length - 1].t).toFixed(1)},${Y(0)} L${X(pts[0].t).toFixed(1)},${Y(0)} Z`, fill: '#3b82f6', 'fill-opacity': 0.1 }, svg);
+    svgEl('path', { d: line, fill: 'none', stroke: '#3b82f6', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+  }
+  // Crosshair (under the markers)
+  const cross = svgEl('line', { y1: pad.t, y2: H - pad.b, stroke: '#94a3b8', 'stroke-width': 1, opacity: 0 }, svg);
+  // Markers: drops in the alert colour with a label
+  pts.forEach((p, i) => {
+    const prev = pts[i - 1];
+    p.pct = prev && prev.c > 0 ? ((p.c - prev.c) / prev.c) * 100 : null;
+    p.drop = p.pct !== null && p.pct <= -th;
+    svgEl('circle', { cx: X(p.t), cy: Y(p.c), r: p.drop ? 6 : 4.5, fill: p.drop ? '#ef4444' : '#3b82f6', stroke: '#1e293b', 'stroke-width': 2 }, svg);
+    if (p.drop) {
+      const lb = svgEl('text', { x: X(p.t), y: Y(p.c) - 12, 'text-anchor': 'middle', fill: '#fca5a5', 'font-size': 11, 'font-weight': 'bold' }, svg);
+      lb.textContent = `▼ ${fmtNum(Math.abs(p.pct), 1)}%`;
+    }
+  });
+  // Value at the end of the line
+  const last = pts[pts.length - 1];
+  const endLbl = svgEl('text', { x: X(last.t) + 10, y: Y(last.c) + 4, fill: '#e2e8f0', 'font-size': 12, 'font-weight': 'bold' }, svg);
+  endLbl.textContent = fmtNum(last.c);
+  if (pts.length === 1) {
+    const n = svgEl('text', { x: (pad.l + W - pad.r) / 2, y: pad.t + 14, 'text-anchor': 'middle', fill: '#64748b', 'font-size': 11 }, svg);
+    n.textContent = 'One count so far. Count again after the next sync to see a trend.';
+  }
+  // Hover: snap to the nearest point
+  const tip = document.createElement('div');
+  tip.className = 'chart-tip';
+  wrap.appendChild(tip);
+  const hit = svgEl('rect', { x: pad.l - 10, y: 0, width: W - pad.l - pad.r + 20, height: H, fill: 'transparent' }, svg);
+  const show = clientX => {
+    const box = svg.getBoundingClientRect();
+    const sx = (clientX - box.left) * (W / box.width);
+    let best = pts[0];
+    for (const p of pts) if (Math.abs(X(p.t) - sx) < Math.abs(X(best.t) - sx)) best = p;
+    cross.setAttribute('x1', X(best.t)); cross.setAttribute('x2', X(best.t)); cross.setAttribute('opacity', 0.5);
+    tip.textContent = '';
+    const strong = document.createElement('strong');
+    strong.textContent = `${fmtNum(best.c)} elements`;
+    tip.appendChild(strong);
+    const lines = [`Model synced ${fmtLocal(new Date(best.t).toISOString())}`, `Counted ${fmtLocal(best.at)}`];
+    if (best.pct !== null) lines.push(`${best.pct > 0 ? '+' : ''}${fmtNum(best.pct, 1)}% on the previous count${best.drop ? '  ⚠ drop' : ''}`);
+    if (best.f && best.f !== m.fileName) lines.push(`File: ${best.f}`);
+    for (const l of lines) { const d = document.createElement('div'); d.textContent = l; tip.appendChild(d); }
+    tip.style.display = 'block';
+    const px = (X(best.t) / W) * box.width + 12;
+    const left = px + tip.offsetWidth > wrap.clientWidth ? px - tip.offsetWidth - 24 : px;
+    tip.style.left = `${Math.max(4, left)}px`;
+    tip.style.top = `${(Y(best.c) / H) * box.height - 10}px`;
+  };
+  hit.addEventListener('pointermove', e => show(e.clientX));
+  hit.addEventListener('pointerleave', () => { tip.style.display = 'none'; cross.setAttribute('opacity', 0); });
+}
+window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(() => { if (tab === 'counts') drawChart(); }, 150); });
+
+// ── Property search tab ────────────────────────────────────────
+let sDef = blankSearch();
+let savedSearches = [];
+let searchesLoaded = false;
+let currentSavedId = null;
+let results = null;            // { cols, rows, calcCols, units }
+let resultPage = 0;
+let resultSort = { i: -1, dir: 1 };
+let searchStop = false;
+let searching = false;
+
+function blankSearch() {
+  return {
+    match: 'all',
+    conditions: [{ category: '', property: '', valueType: 0, op: '', value: '', value2: '' }],
+    columns: [{ category: 'Item', name: 'Name', valueType: 5 }, { category: 'Item', name: 'Type', valueType: 5 }],
+    calcs: [],
+    elementsOnly: true,
+    groupBy: '',
+    aggs: {}
+  };
+}
+function colKey(c) { return `${c.category}›${c.name}`; }
+
+function fillScope() {
+  const sel = $('scopeSel');
+  const keep = sel.value;
+  const ms = ov.models.slice().sort((a, b) => a.fileName.localeCompare(b.fileName));
+  sel.innerHTML = '<option value="">All models</option>' + ms.map(m => `<option value="${esc(m.sceneId)}|${esc(m.modelId)}">${esc(m.fileName)} (${esc(m.sceneLabel || m.sceneName)})</option>`).join('');
+  if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
+}
+
+function renderBuilder() {
+  $('matchSel').value = sDef.match;
+  $('elemOnly').checked = sDef.elementsOnly !== false;
+  // Conditions
+  $('conds').innerHTML = sDef.conditions.map((c, i) => {
+    const kind = kindOf(Number(c.valueType));
+    const ops = kind ? OPS[kind] : [];
+    const opSel = `<select class="f-sel" data-ci="${i}" data-f="op" ${kind ? '' : 'disabled'}>${ops.map(([v, l]) => `<option value="${v}"${c.op === v ? ' selected' : ''}>${esc(l)}</option>`).join('') || '<option>—</option>'}</select>`;
+    let val;
+    if (kind === 'bool') val = `<select class="f-sel" data-ci="${i}" data-f="value"><option value="true"${String(c.value) !== 'false' ? ' selected' : ''}>Yes</option><option value="false"${String(c.value) === 'false' ? ' selected' : ''}>No</option></select>`;
+    else if (c.op === 'between') val = `<input class="f-inp" data-ci="${i}" data-f="value" value="${esc(c.value)}" placeholder="from"><input class="f-inp" data-ci="${i}" data-f="value2" value="${esc(c.value2)}" placeholder="to">`;
+    else val = `<input class="f-inp" data-ci="${i}" data-f="value" value="${esc(c.value)}" placeholder="${c.op === 'anyOf' || c.op === 'noneOf' ? 'values, separated by commas' : kind === 'number' ? 'number' : 'text'}" ${kind ? '' : 'disabled'}>`;
+    const picked = c.property ? `<div class="picked">${esc(c.category)} · ${esc(TYPE_LABEL[c.valueType] || 'Other')}</div>` : '';
+    return `<div class="cond${c.op === 'between' ? ' between' : ''}">
+      <div style="position:relative;"><input class="f-inp" data-pp="cond" data-ci="${i}" value="${esc(c.property)}" placeholder="Property: type to search…" autocomplete="off">${picked}</div>
+      ${opSel}${val}
+      <button class="x-btn" data-del="${i}" title="Remove condition" aria-label="Remove condition">✕</button>
+    </div>`;
+  }).join('') || '<div class="help">No conditions: pick one model below to list everything in it.</div>';
+  $('conds').querySelectorAll('[data-f]').forEach(el => {
+    el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+      const c = sDef.conditions[Number(el.dataset.ci)];
+      c[el.dataset.f] = el.value;
+      if (el.dataset.f === 'op') renderBuilder();
+    });
+  });
+  $('conds').querySelectorAll('[data-del]').forEach(b => b.onclick = () => { sDef.conditions.splice(Number(b.dataset.del), 1); renderBuilder(); });
+  $('conds').querySelectorAll('[data-pp]').forEach(attachPicker);
+  // Columns
+  $('colChips').innerHTML = sDef.columns.map((c, i) => `<span class="col-chip"><span class="cat">${esc(c.category)} ›</span> ${esc(c.name)}<button data-delcol="${i}" title="Remove column" aria-label="Remove column">✕</button></span>`).join('') || '<span class="help">Add at least one column.</span>';
+  $('colChips').querySelectorAll('[data-delcol]').forEach(b => b.onclick = () => { sDef.columns.splice(Number(b.dataset.delcol), 1); renderBuilder(); });
+  // Calculated columns
+  $('calcs').innerHTML = sDef.calcs.map((c, i) => `<div class="calc">
+      <input class="f-inp" data-ki="${i}" data-f="name" value="${esc(c.name)}" placeholder="Name, e.g. Tonnes">
+      <span class="eq">=</span>
+      <input class="f-inp mono" data-ki="${i}" data-f="formula" value="${esc(c.formula)}" placeholder="[Assembly/Cast unit weight] / 1000" style="font-family:'Courier New',monospace;">
+      <button class="x-btn" data-delcalc="${i}" title="Remove" aria-label="Remove calculated column">✕</button>
+      <div class="calc-err" id="calcErr${i}"></div>
+    </div>`).join('');
+  $('calcs').querySelectorAll('[data-f]').forEach(el => el.addEventListener('input', () => {
+    sDef.calcs[Number(el.dataset.ki)][el.dataset.f] = el.value;
+    if (results) recomputeCalcs();
+  }));
+  $('calcs').querySelectorAll('[data-delcalc]').forEach(b => b.onclick = () => { sDef.calcs.splice(Number(b.dataset.delcalc), 1); renderBuilder(); if (results) recomputeCalcs(); });
+  $('btnDelSaved').disabled = !currentSavedId;
+}
+function addCondition() { sDef.conditions.push({ category: '', property: '', valueType: 0, op: '', value: '', value2: '' }); renderBuilder(); const ins = $('conds').querySelectorAll('[data-pp]'); if (ins.length) ins[ins.length - 1].focus(); }
+function addCalc() { sDef.calcs.push({ name: '', formula: '' }); renderBuilder(); }
+function newSearch() {
+  sDef = blankSearch(); currentSavedId = null; $('savedSel').value = '';
+  results = null; $('resultsPanel').style.display = 'none'; $('searchErr').textContent = ''; $('searchProgress').textContent = '';
+  renderBuilder();
+}
+
+// Property picker: one dropdown shared by every property box
+let ppTarget = null, ppItems = [], ppHl = -1, ppTimer = null, ppSeq = 0;
+function attachPicker(input) {
+  if (input._pp) return;
+  input._pp = true;
+  input.addEventListener('focus', () => openPicker(input));
+  input.addEventListener('input', () => { clearTimeout(ppTimer); ppTimer = setTimeout(() => queryPicker(input), 220); });
+  input.addEventListener('keydown', e => {
+    if ($('pp').style.display !== 'block') return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); ppHl = Math.min(ppItems.length - 1, ppHl + 1); paintPicker(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); ppHl = Math.max(0, ppHl - 1); paintPicker(); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (ppItems[ppHl]) choosePicker(ppItems[ppHl]); }
+    else if (e.key === 'Escape') closePicker();
+  });
+  input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) closePicker(); }, 180));
+}
+function placePicker(input) {
+  const r = input.getBoundingClientRect();
+  const pp = $('pp');
+  const w = Math.min(Math.max(r.width, 340), window.innerWidth - 16);
+  pp.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + window.scrollX}px`;
+  pp.style.top = `${r.bottom + window.scrollY + 4}px`;
+  pp.style.width = `${w}px`;
+}
+function openPicker(input) {
+  ppTarget = input;
+  placePicker(input);
+  $('pp').style.display = 'block';
+  queryPicker(input);
+}
+function closePicker() { $('pp').style.display = 'none'; ppTarget = null; }
+async function queryPicker(input) {
+  if (!currentProject || ppTarget !== input) return;
+  const seq = ++ppSeq;
+  const q = input.value.trim();
+  $('pp').innerHTML = '<div class="pp-msg">Searching property names…</div>';
+  try {
+    const d = await api(`/api/od?op=properties&project=${encodeURIComponent(currentProject.key)}&q=${encodeURIComponent(q)}`);
+    if (seq !== ppSeq || ppTarget !== input) return;
+    const forCond = input.dataset.pp === 'cond';
+    ppItems = (d.matches || []).filter(p => !forCond || kindOf(p.t));
+    ppHl = ppItems.length ? 0 : -1;
+    paintPicker(q ? '' : `${fmtNum(d.total)} properties in this project. Type to narrow the list.`);
+  } catch (e) {
+    if (e.message === SIGNED_OUT) return;
+    $('pp').innerHTML = `<div class="pp-msg" style="color:#fca5a5">${esc(e.message)}</div>`;
+  }
+}
+function paintPicker(msg) {
+  const pp = $('pp');
+  pp.innerHTML = (msg ? `<div class="pp-msg">${esc(msg)}</div>` : '') + (ppItems.length ? ppItems.map((p, i) =>
+    `<div class="pp-item${i === ppHl ? ' hl' : ''}" data-i="${i}"><div>${esc(p.n)}</div><div class="pp-cat">${esc(p.c)} · ${esc(TYPE_LABEL[p.t] || 'Other')}${p.custom ? ' · custom' : ''}</div></div>`).join('')
+    : '<div class="pp-msg">No matching properties.</div>');
+  pp.querySelectorAll('.pp-item').forEach(el => el.onmousedown = e => { e.preventDefault(); choosePicker(ppItems[Number(el.dataset.i)]); });
+  const hl = pp.querySelector('.hl');
+  if (hl) hl.scrollIntoView({ block: 'nearest' });
+}
+function choosePicker(p) {
+  const input = ppTarget;
+  closePicker();
+  if (!input || !p) return;
+  if (input.dataset.pp === 'column') {
+    if (!sDef.columns.some(c => colKey(c) === `${p.c}›${p.n}`)) sDef.columns.push({ category: p.c, name: p.n, valueType: p.t });
+    input.value = '';
+    renderBuilder();
+    $('colAdd').focus();
+    return;
+  }
+  const c = sDef.conditions[Number(input.dataset.ci)];
+  c.category = p.c; c.property = p.n; c.valueType = p.t;
+  const kind = kindOf(p.t);
+  if (!OPS[kind].some(([v]) => v === c.op)) c.op = kind === 'text' ? 'contains' : 'equal';
+  if (kind === 'bool') c.value = 'true';
+  // Show what you search on
+  if (!sDef.columns.some(x => colKey(x) === `${p.c}›${p.n}`)) sDef.columns.push({ category: p.c, name: p.n, valueType: p.t });
+  renderBuilder();
+}
+attachPicker($('colAdd'));
+window.addEventListener('scroll', e => { if (ppTarget && !$('pp').contains(e.target)) placePicker(ppTarget); }, true);
+
+// Run: page through the results from the server
+async function runSearch() {
+  if (searching || !currentProject) return;
+  $('searchErr').textContent = '';
+  const conds = sDef.conditions.filter(c => c.property);
+  const [sceneId, modelId] = ($('scopeSel').value || '|').split('|');
+  if (!conds.length && !modelId) { $('searchErr').textContent = 'Add at least one condition, or pick one model to list everything in it.'; return; }
+  if (!sDef.columns.length) { $('searchErr').textContent = 'Add at least one column to show.'; return; }
+  const bad = conds.find(c => c.op !== 'between' && kindOf(Number(c.valueType)) !== 'bool' && String(c.value).trim() === '' && c.op !== 'equal' && c.op !== 'notEqual');
+  if (bad) { $('searchErr').textContent = `Enter a value for "${bad.property}".`; return; }
+  const cols = sDef.columns.map(c => ({ ...c }));
+  const payload = {
+    match: sDef.match, conditions: conds, columns: cols.map(c => ({ category: c.category, name: c.name })),
+    elementsOnly: $('elemOnly').checked, sceneId: sceneId || null, modelId: modelId || null
+  };
+  searching = true; searchStop = false;
+  $('btnRun').disabled = true; $('btnRunStop').style.display = '';
+  const prog = $('searchProgress');
+  prog.innerHTML = '<span class="spinner" style="display:inline-block"></span> Searching Revizto…';
+  const rows = [];
+  let units = cols.map(() => '');
+  let cursor = null, capped = false, stopped = false;
+  try {
+    do {
+      const d = await post('search', { ...payload, cursor });
+      for (const r of d.rows) rows.push(r);
+      d.units.forEach((u, i) => { if (u && !units[i]) units[i] = u; });
+      cursor = d.cursor;
+      prog.innerHTML = `<span class="spinner" style="display:inline-block"></span> Found ${fmtNum(rows.length)} elements${cursor ? ' so far…' : ''}`;
+      if (rows.length >= MAX_ROWS) { capped = true; break; }
+      if (searchStop && cursor) { stopped = true; break; }
+    } while (cursor);
+    results = { cols, units, rows, scopeLabel: modelId ? $('scopeSel').selectedOptions[0].textContent : 'All models', partial: capped || stopped };
+    resultPage = 0; resultSort = { i: -1, dir: 1 };
+    prog.textContent = `${fmtNum(rows.length)} elements${capped ? ` (stopped at ${fmtNum(MAX_ROWS)}; narrow the search)` : stopped ? ' (stopped early, totals are partial)' : ''}`;
+    recomputeCalcs();
+  } catch (e) {
+    if (e.message !== SIGNED_OUT) { $('searchErr').textContent = e.message; prog.textContent = ''; }
+  } finally {
+    searching = false;
+    $('btnRun').disabled = false; $('btnRunStop').style.display = 'none';
+  }
+}
+
+// Numbers inside text values ("193", "1,234.5 kg"); not codes like "R/24"
+const NUM_RX = /^\s*([-+]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?(?:e[-+]?\d+)?)\s*(?:[a-zA-Zµ²³°%/]{0,6}\.?)\s*$/i;
+function toNum(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (v === null || v === undefined || typeof v === 'boolean') return null;
+  const m = String(v).match(NUM_RX);
+  if (!m || !m[1] || !/\d/.test(m[1])) return null;
+  const n = Number(m[1].replace(/,/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+// Formula engine: + - * / ^, brackets, [Column], numbers, a few functions. No eval.
+const FUNCS = {
+  ROUND: (x, d = 0) => { const f = Math.pow(10, d); return Math.round(x * f) / f; },
+  ABS: Math.abs, SQRT: Math.sqrt, CEIL: Math.ceil, FLOOR: Math.floor,
+  MIN: (...a) => Math.min(...a), MAX: (...a) => Math.max(...a)
+};
+function compileFormula(src, resolve) {
+  const toks = [];
+  const s = String(src || '');
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (/\s/.test(ch)) { i++; continue; }
+    if (ch === '[') {
+      const j = s.indexOf(']', i);
+      if (j < 0) throw new Error('A [ is missing its ]');
+      toks.push({ t: 'ref', v: s.slice(i + 1, j).trim() }); i = j + 1; continue;
+    }
+    const num = s.slice(i).match(/^\d*\.?\d+(?:e[-+]?\d+)?/i);
+    if (num) { toks.push({ t: 'num', v: Number(num[0]) }); i += num[0].length; continue; }
+    const id = s.slice(i).match(/^[A-Za-z]+/);
+    if (id) { toks.push({ t: 'fn', v: id[0].toUpperCase() }); i += id[0].length; continue; }
+    const map = { '×': '*', '÷': '/', '−': '-' };
+    const op = map[ch] || ch;
+    if ('+-*/^(),'.includes(op)) { toks.push({ t: 'op', v: op }); i++; continue; }
+    throw new Error(`Unexpected "${ch}"`);
+  }
+  let p = 0;
+  const peek = v => toks[p] && toks[p].t === 'op' && toks[p].v === v;
+  const expect = v => { if (!peek(v)) throw new Error(`Expected "${v}"`); p++; };
+  function expr() { let a = term(); while (peek('+') || peek('-')) { const o = toks[p++].v; const b = term(); const x = a; a = o === '+' ? r => add(x(r), b(r)) : r => add(x(r), neg(b(r))); } return a; }
+  function term() { let a = power(); while (peek('*') || peek('/')) { const o = toks[p++].v; const b = power(); const x = a; a = o === '*' ? r => mul(x(r), b(r)) : r => div(x(r), b(r)); } return a; }
+  function power() { const a = unary(); if (peek('^')) { p++; const b = power(); return r => { const x = a(r), y = b(r); return x === null || y === null ? null : Math.pow(x, y); }; } return a; }
+  function unary() { if (peek('-')) { p++; const a = unary(); return r => neg(a(r)); } if (peek('+')) { p++; return unary(); } return primary(); }
+  function primary() {
+    const tk = toks[p];
+    if (!tk) throw new Error('The formula ends too early');
+    if (tk.t === 'num') { p++; return () => tk.v; }
+    if (tk.t === 'ref') { p++; const get = resolve(tk.v); return r => get(r); }
+    if (tk.t === 'fn') {
+      p++;
+      const f = FUNCS[tk.v];
+      if (!f) throw new Error(`Unknown function ${tk.v}`);
+      expect('(');
+      const args = [];
+      if (!peek(')')) { args.push(expr()); while (peek(',')) { p++; args.push(expr()); } }
+      expect(')');
+      return r => { const vals = args.map(a => a(r)); return vals.some(v => v === null) ? null : f(...vals); };
+    }
+    if (peek('(')) { p++; const a = expr(); expect(')'); return a; }
+    throw new Error(`Unexpected "${tk.v}"`);
+  }
+  const fn = expr();
+  if (p < toks.length) throw new Error(`Unexpected "${toks[p].v}"`);
+  return fn;
+}
+const add = (a, b) => (a === null || b === null ? null : a + b);
+const neg = a => (a === null ? null : -a);
+const mul = (a, b) => (a === null || b === null ? null : a * b);
+const div = (a, b) => (a === null || b === null || b === 0 ? null : a / b);
+
+// All columns of the results table: model file, the properties, then the calculated ones
+function recomputeCalcs() {
+  if (!results) return;
+  const R = results;
+  // Which property columns hold numbers
+  R.numeric = R.cols.map((c, i) => {
+    if (kindOf(Number(c.valueType)) === 'number') return true;
+    let seen = 0, nums = 0;
+    for (let k = 0; k < R.rows.length && seen < 400; k++) {
+      const v = R.rows[k].v[i];
+      if (v === null || v === undefined || v === '') continue;
+      seen++;
+      if (toNum(v) !== null) nums++;
+    }
+    return seen > 0 && nums / seen >= 0.8;
+  });
+  // Labels people can use in formulas: the property name, or "Category › Name" when names repeat
+  const nameCount = new Map();
+  R.cols.forEach(c => nameCount.set(c.name.toLowerCase(), (nameCount.get(c.name.toLowerCase()) || 0) + 1));
+  R.labels = R.cols.map(c => (nameCount.get(c.name.toLowerCase()) > 1 ? `${c.category} › ${c.name}` : c.name));
+  R.calc = [];
+  R.rowIndex = new Map(R.rows.map((r, i) => [r, i]));
+  const getters = new Map();
+  R.cols.forEach((c, i) => {
+    const g = r => toNum(r.v[i]);
+    getters.set(R.labels[i].toLowerCase(), g);
+    getters.set(`${c.category} › ${c.name}`.toLowerCase(), g);
+    getters.set(`${c.category}›${c.name}`.toLowerCase(), g);
+  });
+  sDef.calcs.forEach((k, ci) => {
+    const errEl = $(`calcErr${ci}`);
+    if (errEl) errEl.textContent = '';
+    if (!k.formula.trim()) return;
+    const name = k.name.trim() || `Calc ${ci + 1}`;
+    try {
+      const fn = compileFormula(k.formula, ref => {
+        const g = getters.get(ref.toLowerCase());
+        if (!g) throw new Error(`No column called [${ref}]`);
+        return g;
+      });
+      const vals = R.rows.map(r => { try { const v = fn(r); return Number.isFinite(v) ? v : null; } catch { return null; } });
+      R.calc.push({ name, vals });
+      const idx = R.calc.length - 1;
+      getters.set(name.toLowerCase(), r => R.calc[idx].vals[R.rowIndex.get(r)]);
+    } catch (e) {
+      if (errEl) errEl.textContent = e.message;
+    }
+  });
+  fillGroupSel();
+  renderResults();
+}
+
+function resultColumns() {
+  const R = results;
+  const cols = [{ label: 'Model file', get: i => { const m = modelById.get(R.rows[i].m); return m ? m.fileName : R.rows[i].m; }, num: false, key: '_model' }];
+  R.cols.forEach((c, k) => cols.push({
+    label: R.labels[k] + (R.units[k] ? ` (${R.units[k]})` : ''),
+    full: `${c.category} › ${c.name}`,
+    get: i => R.rows[i].v[k],
+    num: R.numeric[k],
+    key: colKey(c)
+  }));
+  R.calc.forEach(c => cols.push({ label: c.name, full: 'Calculated', get: i => c.vals[i], num: true, key: `calc:${c.name}`, calc: true }));
+  return cols;
+}
+
+function fillGroupSel() {
+  const cols = resultColumns();
+  const sel = $('groupSel');
+  sel.innerHTML = '<option value="">No grouping</option>' + cols.filter(c => !c.calc).map(c => `<option value="${esc(c.key)}">${esc(c.label)}</option>`).join('');
+  sel.value = cols.some(c => c.key === sDef.groupBy) ? sDef.groupBy : '';
+}
+function setGroup(k) { sDef.groupBy = k; resultPage = 0; resultSort = { i: -1, dir: 1 }; renderResults(); }
+
+const AGGS = { sum: 'Sum', avg: 'Average', min: 'Min', max: 'Max', count: 'Count' };
+function aggregate(vals, fn) {
+  const nums = vals.map(toNum).filter(v => v !== null);
+  if (fn === 'count') return vals.filter(v => v !== null && v !== undefined && v !== '').length;
+  if (!nums.length) return null;
+  if (fn === 'sum') return nums.reduce((a, b) => a + b, 0);
+  if (fn === 'avg') return nums.reduce((a, b) => a + b, 0) / nums.length;
+  if (fn === 'min') return Math.min(...nums);
+  if (fn === 'max') return Math.max(...nums);
+  return null;
+}
+function aggOf(col) { return sDef.aggs[col.key] || (col.num ? 'sum' : 'count'); }
+function fmtCell(v, num) {
+  if (v === null || v === undefined || v === '') return '';
+  if (num) { const n = toNum(v); return n === null ? String(v) : smartNum(n); }
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+  return String(v);
+}
+
+function renderResults() {
+  const R = results;
+  if (!R) return;
+  $('resultsPanel').style.display = 'block';
+  const cols = resultColumns();
+  const n = R.rows.length;
+  $('cntResults').textContent = `${fmtNum(n)} element${n === 1 ? '' : 's'} · ${R.scopeLabel}${R.partial ? ' · partial' : ''}`;
+
+  // Headline tiles: totals of the number columns
+  const numCols = cols.filter(c => c.num);
+  const idx = [...Array(n).keys()];
+  $('tiles').innerHTML = [`<div class="tile" style="border-left-color:#3b82f6"><div class="tile-lbl">Elements found</div><div class="tile-val">${fmtNum(n)}</div><div class="tile-sub">${esc(R.scopeLabel)}</div></div>`]
+    .concat(numCols.slice(0, 7).map(c => {
+      const fn = aggOf(c);
+      const v = aggregate(idx.map(c.get), fn);
+      return `<div class="tile"><div class="tile-lbl" title="${esc(c.full || c.label)}">${esc(c.label)}</div><div class="tile-val">${v === null ? '—' : smartNum(v)}</div><div class="tile-sub">${AGGS[fn]}${c.calc ? ' · calculated' : ''}</div></div>`;
+    })).join('');
+
+  const groupCol = cols.find(c => c.key === sDef.groupBy);
+  if (groupCol) return renderGrouped(cols, groupCol);
+
+  // Sort
+  let order = idx;
+  if (resultSort.i >= 0 && cols[resultSort.i]) {
+    const c = cols[resultSort.i];
+    const key = i => { const v = c.get(i); return c.num ? toNum(v) : (v === null || v === undefined ? '' : String(v).toLowerCase()); };
+    order = idx.slice().sort((a, b) => {
+      const x = key(a), y = key(b);
+      if (x === y) return 0;
+      if (x === null || x === '') return 1;
+      if (y === null || y === '') return -1;
+      return (x < y ? -1 : 1) * resultSort.dir;
+    });
+  }
+  const pages = Math.max(1, Math.ceil(n / PAGE_ROWS));
+  resultPage = Math.min(resultPage, pages - 1);
+  const slice = order.slice(resultPage * PAGE_ROWS, (resultPage + 1) * PAGE_ROWS);
+  $('thResults').innerHTML = cols.map((c, i) => `<th class="sortable${c.num ? ' num' : ''}" data-i="${i}" title="${esc(c.full || c.label)}">${esc(c.label)}${resultSort.i === i ? `<span class="arrow">${resultSort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('');
+  $('thResults').querySelectorAll('th').forEach(th => th.onclick = () => {
+    const i = Number(th.dataset.i);
+    resultSort = { i, dir: resultSort.i === i ? -resultSort.dir : 1 };
+    renderResults();
+  });
+  $('tbResults').innerHTML = slice.length ? slice.map(i => `<tr>${cols.map(c => `<td class="${c.num ? 'num mono' : 'wrap'}">${esc(fmtCell(c.get(i), c.num))}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${cols.length}"><div class="empty"><strong>No elements match</strong>Try "contains" instead of "is", or check the property and value.</div></td></tr>`;
+  renderTotals(cols, idx);
+  $('pager').innerHTML = n > PAGE_ROWS
+    ? `<button class="btn-xs" ${resultPage ? '' : 'disabled'} onclick="resultPage--;renderResults()">‹ Prev</button>
+       <span>Rows ${fmtNum(resultPage * PAGE_ROWS + 1)}–${fmtNum(Math.min(n, (resultPage + 1) * PAGE_ROWS))} of ${fmtNum(n)}</span>
+       <button class="btn-xs" ${resultPage < pages - 1 ? '' : 'disabled'} onclick="resultPage++;renderResults()">Next ›</button>
+       <span style="margin-left:auto">Totals use all ${fmtNum(n)} rows. CSV export includes every row.</span>`
+    : `<span>Totals at the bottom use all rows. Change what each total shows with its drop-down.</span>`;
+}
+
+function renderTotals(cols, idx) {
+  $('tfResults').innerHTML = cols.map((c, i) => {
+    if (i === 0) return '<td>Total</td>';
+    const fn = aggOf(c);
+    const v = aggregate(idx.map(c.get), fn);
+    const opts = (c.num ? Object.keys(AGGS) : ['count']).map(k => `<option value="${k}"${k === fn ? ' selected' : ''}>${AGGS[k]}</option>`).join('');
+    return `<td class="${c.num ? 'num' : ''}"><select class="agg-sel" data-k="${esc(c.key)}">${opts}</select>${v === null ? '—' : c.num && fn !== 'count' ? smartNum(v) : fmtNum(v)}</td>`;
+  }).join('');
+  $('tfResults').querySelectorAll('.agg-sel').forEach(s => s.onchange = () => { sDef.aggs[s.dataset.k] = s.value; renderResults(); });
+}
+
+function groupRows(cols, groupCol) {
+  const groups = new Map();
+  for (let i = 0; i < results.rows.length; i++) {
+    const raw = groupCol.get(i);
+    const k = raw === null || raw === undefined || raw === '' ? '(blank)' : String(raw);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(i);
+  }
+  const numCols = cols.filter(c => c.num && c !== groupCol);
+  return { numCols, list: [...groups.entries()].map(([k, ids]) => ({ k, ids, vals: numCols.map(c => aggregate(ids.map(c.get), aggOf(c))) })) };
+}
+function renderGrouped(cols, groupCol) {
+  const { numCols, list } = groupRows(cols, groupCol);
+  const head = [groupCol.label, 'Elements', ...numCols.map(c => `${c.label} (${AGGS[aggOf(c)]})`)];
+  const s = resultSort;
+  const sorted = list.slice().sort((a, b) => {
+    if (s.i < 0) return b.ids.length - a.ids.length || a.k.localeCompare(b.k);
+    const x = s.i === 0 ? a.k : s.i === 1 ? a.ids.length : a.vals[s.i - 2];
+    const y = s.i === 0 ? b.k : s.i === 1 ? b.ids.length : b.vals[s.i - 2];
+    if (x === y) return 0;
+    if (x === null) return 1; if (y === null) return -1;
+    return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y))) * s.dir;
+  });
+  $('thResults').innerHTML = head.map((h, i) => `<th class="sortable${i ? ' num' : ''}" data-i="${i}">${esc(h)}${s.i === i ? `<span class="arrow">${s.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('');
+  $('thResults').querySelectorAll('th').forEach(th => th.onclick = () => {
+    const i = Number(th.dataset.i);
+    resultSort = { i, dir: resultSort.i === i ? -resultSort.dir : (i ? -1 : 1) };
+    renderResults();
+  });
+  $('tbResults').innerHTML = sorted.map(g => `<tr><td class="wrap">${esc(g.k)}</td><td class="num mono">${fmtNum(g.ids.length)}</td>${g.vals.map(v => `<td class="num mono">${v === null ? '—' : smartNum(v)}</td>`).join('')}</tr>`).join('');
+  const all = [...Array(results.rows.length).keys()];
+  $('tfResults').innerHTML = `<td>Total (${fmtNum(list.length)} groups)</td><td class="num">${fmtNum(all.length)}</td>` +
+    numCols.map(c => { const v = aggregate(all.map(c.get), aggOf(c)); return `<td class="num">${v === null ? '—' : smartNum(v)}</td>`; }).join('');
+  $('pager').innerHTML = `<span>Grouped by <strong>${esc(groupCol.label)}</strong>. Pick how each number column is totalled with "No grouping", then group again.</span>`;
+}
+
+function exportResultsCsv() {
+  if (!results) return;
+  const cols = resultColumns();
+  const groupCol = cols.find(c => c.key === sDef.groupBy);
+  const out = [];
+  const all = [...Array(results.rows.length).keys()];
+  if (groupCol) {
+    const { numCols, list } = groupRows(cols, groupCol);
+    out.push([groupCol.label, 'Elements', ...numCols.map(c => `${c.label} (${AGGS[aggOf(c)]})`)]);
+    list.sort((a, b) => b.ids.length - a.ids.length).forEach(g => out.push([g.k, g.ids.length, ...g.vals.map(v => (v === null ? '' : v))]));
+    out.push(['Total', all.length, ...numCols.map(c => { const v = aggregate(all.map(c.get), aggOf(c)); return v === null ? '' : v; })]);
+  } else {
+    out.push(cols.map(c => c.label));
+    all.forEach(i => out.push(cols.map(c => { const v = c.get(i); return c.num ? (toNum(v) ?? (v ?? '')) : (v ?? ''); })));
+    out.push(cols.map((c, i) => { if (!i) return 'Total'; const fn = aggOf(c); const v = aggregate(all.map(c.get), fn); return v === null ? '' : `${v} (${AGGS[fn]})`; }));
+  }
+  const name = (savedSearches.find(s => s.id === currentSavedId) || {}).name || 'property_search';
+  downloadCsv(`${safeName(currentProject.name)}_${safeName(name)}_${new Date().toISOString().slice(0, 10)}.csv`, out);
+}
+
+// Saved searches
+async function loadSaved(listOnly) {
+  if (listOnly === true) {
+    try {
+      const d = await api('/api/od?op=searches');
+      savedSearches = d.searches || [];
+      searchesLoaded = true;
+      $('savedSel').innerHTML = '<option value="">Saved searches…</option>' + savedSearches.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+      if (currentSavedId) $('savedSel').value = String(currentSavedId);
+    } catch (e) { if (e.message !== SIGNED_OUT) $('searchErr').textContent = e.message; }
+    return;
+  }
+  const id = Number($('savedSel').value);
+  const s = savedSearches.find(x => x.id === id);
+  if (!s) { currentSavedId = null; renderBuilder(); return; }
+  const d = s.definition || {};
+  sDef = { ...blankSearch(), ...d, aggs: d.aggs || {}, calcs: d.calcs || [], conditions: d.conditions || [], columns: d.columns || [] };
+  currentSavedId = s.id;
+  results = null; $('resultsPanel').style.display = 'none'; $('searchProgress').textContent = ''; $('searchErr').textContent = '';
+  renderBuilder();
+  toast(`Loaded "${s.name}". Click Run search.`, '#1d4ed8');
+}
+function definition() {
+  return {
+    match: sDef.match, elementsOnly: $('elemOnly').checked,
+    conditions: sDef.conditions.filter(c => c.property),
+    columns: sDef.columns, calcs: sDef.calcs.filter(c => c.formula.trim()), groupBy: sDef.groupBy || '', aggs: sDef.aggs
+  };
+}
+let saveAsNew = false;
+function saveSearch(asNew) {
+  saveAsNew = asNew || !currentSavedId;
+  const cur = savedSearches.find(s => s.id === currentSavedId);
+  if (!saveAsNew && cur) { doSave(cur.name, cur.id); return; }
+  $('saveName').value = cur ? `${cur.name} (copy)` : '';
+  $('saveErr').textContent = '';
+  openDlg('saveDlg');
+  setTimeout(() => $('saveName').focus(), 50);
+}
+function confirmSave() { doSave($('saveName').value.trim(), null); }
+async function doSave(name, id) {
+  if (!name) { $('saveErr').textContent = 'Give the search a name.'; return; }
+  $('saveBtn').disabled = true;
+  try {
+    const d = await api('/api/od?op=search-save', { method: 'POST', body: JSON.stringify({ id, name, definition: definition() }) });
+    currentSavedId = d.search.id;
+    closeDlg('saveDlg');
+    await loadSaved(true);
+    $('btnDelSaved').disabled = false;
+    toast(`Saved "${d.search.name}"`, '#16a34a');
+  } catch (e) {
+    if (e.message === SIGNED_OUT) return;
+    if ($('saveDlg').classList.contains('show')) $('saveErr').textContent = e.message; else toast(e.message, '#dc2626');
+  } finally { $('saveBtn').disabled = false; }
+}
+async function deleteSaved() {
+  const s = savedSearches.find(x => x.id === currentSavedId);
+  if (!s || !confirm(`Delete the saved search "${s.name}"? This can't be undone.`)) return;
+  try {
+    await api('/api/od?op=search-delete', { method: 'POST', body: JSON.stringify({ id: s.id }) });
+    currentSavedId = null;
+    await loadSaved(true);
+    $('savedSel').value = '';
+    renderBuilder();
+    toast('Deleted', '#16a34a');
+  } catch (e) { if (e.message !== SIGNED_OUT) toast(e.message, '#dc2626'); }
+}
+
+// ── Manage projects (admin) ────────────────────────────────────
+let mgProjects = [], mgNeedsSetup = false, mgEditing = null, mgBusy = false, mgNameTouched = false;
+let mgRevizto = null, mgReviztoPartial = false, mgReviztoIssues = [], mgReviztoConnCount = 1, mgReviztoNotConnected = [], mgReviztoFresh = false;
+let mgTab = 'projects', mgAccounts = [];
+
+function openManage(t) { openDlg('manageDlg'); setMgTab(t === 'accounts' ? 'accounts' : 'projects'); loadMgProjects(); }
+function closeManage() { if (!mgBusy) closeDlg('manageDlg'); }
+function setMgTab(t) {
+  if (mgBusy) return;
+  mgTab = t;
+  document.querySelectorAll('#mgTabs .chip').forEach(c => c.classList.toggle('active', c.dataset.tab === t));
+  if (t === 'projects') { $('mgAccView').style.display = 'none'; showMgList(); return; }
+  $('mgListView').style.display = 'none';
+  $('mgFormView').style.display = 'none';
+  $('mgNotice').innerHTML = '';
+  $('mgAccView').style.display = 'block';
+  $('mgPrimary').style.display = 'none';
+  $('mgCancel').style.display = 'none';
+  $('mgRedirect').textContent = `${location.origin}/api/revizto-callback`;
+  $('mgFoot').textContent = 'Each Revizto account that holds a licence needs its own custom app.';
+  loadAccounts();
+}
+async function loadAccounts() {
+  $('mgAccBody').innerHTML = '<tr><td colspan="5" style="color:#64748b">Loading…</td></tr>';
+  try {
+    const d = await api('/api/revizto-accounts');
+    mgAccounts = d.accounts || [];
+    $('mgAccBody').innerHTML = mgAccounts.length ? mgAccounts.map(a => `<tr>
+        <td><strong>${esc(a.label)}</strong>${a.builtIn ? '<div class="sub">set in Vercel</div>' : ''}</td>
+        <td class="mono">${esc(a.clientId)}</td>
+        <td>${a.connected ? `<span class="pill p-ok">Connected</span>${a.savedAt ? `<div class="sub">since ${esc(fmtLocal(a.savedAt))}</div>` : ''}` : '<span class="pill p-bad">Not signed in</span>'}</td>
+        <td>${a.projects}</td>
+        <td style="text-align:right;white-space:nowrap"><button class="btn-xs${a.connected ? '' : ' ok'}" data-connect="${esc(a.id)}">${a.connected ? 'Reconnect' : 'Connect'}</button>
+          ${a.builtIn ? '' : `<button class="btn-xs warn" data-remove="${esc(a.id)}">Remove</button>`}</td>
+      </tr>`).join('') : '<tr><td colspan="5" style="color:#64748b">No Revizto accounts yet. Add REVIZTO_CLIENT_ID and REVIZTO_CLIENT_SECRET in Vercel.</td></tr>';
+    $('mgAccBody').querySelectorAll('[data-connect]').forEach(b => b.onclick = () => connectRevizto(b.dataset.connect));
+    $('mgAccBody').querySelectorAll('[data-remove]').forEach(b => b.onclick = () => removeAccount(b.dataset.remove));
+  } catch (e) {
+    if (e.message !== SIGNED_OUT) $('mgAccBody').innerHTML = `<tr><td colspan="5" style="color:#fca5a5">Could not load: ${esc(e.message)}</td></tr>`;
+  }
+}
+async function addAccount() {
+  if (mgBusy) return;
+  const label = $('accLabel').value.trim(), clientId = $('accClientId').value.trim(), clientSecret = $('accSecret').value.trim();
+  const err = $('accErr');
+  if (!label) { err.textContent = 'Enter a name for this Revizto account.'; return; }
+  if (!clientId) { err.textContent = 'Paste the client ID.'; return; }
+  if (!clientSecret) { err.textContent = 'Paste the client secret.'; return; }
+  mgBusy = true; err.textContent = ''; $('accAddBtn').disabled = true;
+  try {
+    await api('/api/revizto-accounts', { method: 'POST', body: JSON.stringify({ label, clientId, clientSecret }) });
+    ['accLabel', 'accClientId', 'accSecret'].forEach(id => { $(id).value = ''; });
+    mgRevizto = null; mgReviztoFresh = true;
+    toast(`Added ${label}. Now click Connect to sign in to Revizto for it.`, '#16a34a');
+    mgBusy = false;
+    await loadAccounts();
+  } catch (e) { if (e.message !== SIGNED_OUT) err.textContent = e.message; }
+  finally { mgBusy = false; $('accAddBtn').disabled = false; }
+}
+async function removeAccount(id) {
+  const a = mgAccounts.find(x => x.id === id);
+  if (!a || mgBusy || !confirm(`Remove "${a.label}"?\n\nThe app will no longer read projects in that Revizto account.`)) return;
+  mgBusy = true;
+  try {
+    await api(`/api/revizto-accounts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    mgRevizto = null; mgReviztoFresh = true;
+    toast(`Removed ${a.label}`, '#16a34a');
+    mgBusy = false;
+    await loadAccounts();
+  } catch (e) { if (e.message !== SIGNED_OUT) toast(e.message, '#dc2626'); }
+  finally { mgBusy = false; }
+}
+function copyRedirect() {
+  const text = $('mgRedirect').textContent;
+  const done = () => toast('Redirect URI copied');
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  else fallbackCopy(text, done);
+}
+function mgPrimaryAction() { if ($('mgFormView').style.display === 'none') showMgForm(null); else saveMgForm(); }
+function showMgList() {
+  mgEditing = null;
+  $('mgTabs').style.display = 'flex';
+  $('mgAccView').style.display = 'none';
+  $('mgListView').style.display = 'block';
+  $('mgFormView').style.display = 'none';
+  $('mgCancel').style.display = 'none';
+  $('mgPrimary').style.display = '';
+  $('mgPrimary').textContent = '＋ Add Project';
+  $('mgPrimary').disabled = mgNeedsSetup;
+  $('mgErr').textContent = '';
+  const active = mgProjects.filter(p => p.active).length;
+  $('mgFoot').textContent = mgProjects.length ? `${active} active, ${mgProjects.length - active} archived.` : '';
+}
+async function loadMgProjects() {
+  $('mgBody').innerHTML = '<tr><td colspan="4" style="color:#64748b">Loading…</td></tr>';
+  try {
+    const d = await api('/api/manage-projects');
+    mgProjects = d.projects || [];
+    mgNeedsSetup = Boolean(d.needsSetup);
+    renderMgList();
+  } catch (e) {
+    if (e.message !== SIGNED_OUT) $('mgBody').innerHTML = `<tr><td colspan="4" style="color:#fca5a5">Could not load projects: ${esc(e.message)}</td></tr>`;
+  }
+}
+function renderMgList() {
+  if (mgTab !== 'projects') return;
+  $('mgNotice').innerHTML = mgNeedsSetup
+    ? '<div class="notice warn">The database tables aren\'t in Supabase yet, so adding is switched off. Run <code>sql/01-setup.sql</code> in Supabase (SQL Editor), then reopen this window.</div>' : '';
+  $('mgBody').innerHTML = mgProjects.length ? mgProjects.map(p => `<tr style="${p.active ? '' : 'opacity:.6'}">
+      <td><strong>${esc(p.name)}</strong><div class="sub">${esc(p.key)}</div></td>
+      <td>${esc(p.reviztoName || '—')}<div class="sub">${p.reviztoConnection && p.reviztoConnection !== 'main' ? `${esc(p.reviztoConnectionLabel || '')} · ` : ''}${esc(String(p.revizto).slice(0, 8))}…</div></td>
+      <td>${p.active ? '<span class="pill p-ok">Active</span>' : '<span class="pill p-mute">Archived</span>'}</td>
+      <td style="text-align:right;white-space:nowrap">${mgNeedsSetup ? '' : `<button class="btn-xs" data-edit="${esc(p.key)}">Edit</button> ` +
+        (p.active ? `<button class="btn-xs warn" data-archive="${esc(p.key)}">Archive</button>` : `<button class="btn-xs ok" data-restore="${esc(p.key)}">Restore</button>`)}</td>
+    </tr>`).join('') : '<tr><td colspan="4" style="color:#64748b">No projects yet. Click Add Project.</td></tr>';
+  $('mgBody').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => showMgForm(mgProjects.find(p => p.key === b.dataset.edit)));
+  $('mgBody').querySelectorAll('[data-archive]').forEach(b => b.onclick = () => setMgActive(b.dataset.archive, false));
+  $('mgBody').querySelectorAll('[data-restore]').forEach(b => b.onclick = () => setMgActive(b.dataset.restore, true));
+  showMgList();
+}
+async function setMgActive(key, active) {
+  const p = mgProjects.find(x => x.key === key);
+  if (!p || mgBusy) return;
+  if (!active && !confirm(`Archive "${p.name}"?\n\nIt disappears from the project list. Its baseline and counts are kept, and you can restore it here.`)) return;
+  mgBusy = true;
+  try {
+    await api('/api/manage-projects', { method: 'PATCH', body: JSON.stringify({ key, active }) });
+    toast(active ? `Restored ${p.name}` : `Archived ${p.name}`, '#16a34a');
+    mgBusy = false;
+    await loadMgProjects();
+    await loadProjects(active ? key : null);
+  } catch (e) { if (e.message !== SIGNED_OUT) toast(`Could not update: ${e.message}`, '#dc2626'); }
+  finally { mgBusy = false; }
+}
+function showMgForm(project) {
+  mgEditing = project || null;
+  mgNameTouched = Boolean(project);
+  $('mgTabs').style.display = 'none';
+  $('mgListView').style.display = 'none';
+  $('mgFormView').style.display = 'block';
+  $('mgCancel').style.display = 'inline-block';
+  $('mgPrimary').textContent = project ? '✔ Save Changes' : '✔ Save Project';
+  $('mgPrimary').disabled = false;
+  $('mgErr').textContent = '';
+  $('mgName').value = project ? project.name : '';
+  $('mgRvFilter').value = '';
+  $('mgFoot').textContent = project ? `Editing ${project.name}.` : 'Pick the Revizto project, then check the name.';
+  loadMgSource(mgReviztoFresh);
+}
+async function loadMgSource(fresh) {
+  if (!fresh && mgRevizto) { renderMgOptions(); return; }
+  $('mgRvSel').innerHTML = '<option disabled>Loading Revizto projects…</option>';
+  $('mgRvHint').textContent = 'Revizto can take up to a minute the first time.';
+  try {
+    const d = await api(`/api/manage-projects?source=revizto${fresh ? '&fresh=1' : ''}`);
+    mgRevizto = d.projects || [];
+    mgReviztoPartial = Boolean(d.partial);
+    mgReviztoIssues = d.issues || [];
+    mgReviztoConnCount = (d.connections || []).length || 1;
+    mgReviztoNotConnected = d.notConnected || [];
+    mgReviztoFresh = false;
+    renderMgOptions();
+  } catch (e) {
+    if (e.message === SIGNED_OUT) return;
+    $('mgRvSel').innerHTML = '';
+    $('mgRvHint').innerHTML = `<span style="color:#fca5a5">Could not load: ${esc(e.message)}</span> <button class="link-btn" onclick="loadMgSource(true)">Try again</button>`;
+  }
+}
+function renderMgOptions() {
+  if (!mgRevizto) return;
+  const sel = $('mgRvSel');
+  const q = $('mgRvFilter').value.trim().toLowerCase();
+  const keep = sel.value || (mgEditing ? mgEditing.revizto : '');
+  const setUp = new Set(mgProjects.filter(p => !mgEditing || p.key !== mgEditing.key).map(p => p.revizto));
+  const items = mgRevizto.filter(p => !q || p.name.toLowerCase().includes(q) || p.uuid.includes(q) || String(p.licence || '').toLowerCase().includes(q));
+  sel.innerHTML = items.map(p => {
+    let label = p.name;
+    const tags = [];
+    if (p.archived) tags.push('archived');
+    if (!p.licenceActive) tags.push('expired licence');
+    if (tags.length) label += ` (${tags.join(', ')})`;
+    if (p.licence) label += ` · ${p.licence}`;
+    if (mgReviztoConnCount > 1 && p.connectionLabel) label += ` · via ${p.connectionLabel}`;
+    if (setUp.has(p.uuid)) label += '  ✓ already set up';
+    return `<option value="${esc(p.uuid)}"${p.uuid === keep ? ' selected' : ''}>${esc(label)}</option>`;
+  }).join('') || '<option disabled>No matches</option>';
+  renderReviztoIssues();
+  $('mgRvHint').innerHTML = (!mgRevizto.length ? '<span style="color:#fca5a5">No Revizto projects found for the connected accounts.</span>'
+    : `${items.length === mgRevizto.length ? `${mgRevizto.length} projects` : `${items.length} of ${mgRevizto.length} shown`}`) +
+    (mgReviztoPartial ? ' · some licences didn\'t load in time' : '') + ' · <button class="link-btn" onclick="loadMgSource(true)">Reload</button>';
+}
+function renderReviztoIssues() {
+  const box = $('mgRvIssues');
+  const blocked = mgReviztoIssues.filter(i => i.kind === 'app-not-enabled' && i.active);
+  const other = mgReviztoIssues.filter(i => i.kind !== 'app-not-enabled');
+  let html = '';
+  if (mgReviztoNotConnected.length) html += `<div class="notice warn" style="margin-top:8px;font-size:11px;"><strong>Added but not signed in:</strong> ${mgReviztoNotConnected.map(p => esc(p.label)).join(', ')}. <button class="link-btn" onclick="setMgTab('accounts')">Open Revizto accounts</button> and click Connect.</div>`;
+  if (blocked.length) html += `<div class="notice warn" style="margin-top:8px;font-size:11px;"><strong>${blocked.length} active Revizto licence${blocked.length > 1 ? 's aren\'t' : ' isn\'t'} covered by a connected account:</strong> ${blocked.map(i => esc(i.licence)).join(', ')}. Add a custom app for that account under <button class="link-btn" onclick="setMgTab('accounts')">Revizto accounts</button>.</div>`;
+  if (other.length) html += `<div class="notice err" style="margin-top:8px;font-size:11px;"><strong>Couldn't read:</strong> ${other.map(i => `${esc(i.licence)} (${esc(i.message)})`).join('; ')}</div>`;
+  box.innerHTML = html;
+}
+$('mgRvFilter').addEventListener('input', renderMgOptions);
+$('mgRvSel').addEventListener('change', () => {
+  const rv = mgRevizto && mgRevizto.find(p => p.uuid === $('mgRvSel').value);
+  if (rv && !mgNameTouched) $('mgName').value = rv.name.slice(0, 80);
+  $('mgErr').textContent = '';
+});
+$('mgName').addEventListener('input', () => { mgNameTouched = true; $('mgErr').textContent = ''; });
+async function saveMgForm() {
+  if (mgBusy) return;
+  const err = $('mgErr');
+  const name = $('mgName').value.trim();
+  const revizto = $('mgRvSel').value;
+  if (!revizto) { err.textContent = 'Choose the Revizto project.'; return; }
+  if (!name) { err.textContent = 'Enter a name for the pages.'; return; }
+  const rv = mgRevizto && mgRevizto.find(p => p.uuid === revizto);
+  const body = { name, revizto, reviztoName: rv ? rv.name : undefined, reviztoConnection: rv ? rv.connection : undefined };
+  const editing = mgEditing;
+  if (editing) {
+    body.key = editing.key;
+    if (revizto === editing.revizto) { delete body.revizto; delete body.reviztoName; delete body.reviztoConnection; }
+  }
+  mgBusy = true;
+  err.textContent = '';
+  $('mgPrimary').disabled = true;
+  $('mgPrimary').textContent = 'Checking with Revizto…';
+  try {
+    const d = await api('/api/manage-projects', { method: editing ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+    toast(editing ? `Saved ${d.project.name}` : `Added ${d.project.name}`, '#16a34a');
+    mgBusy = false;
+    await loadMgProjects();
+    if (!editing) closeDlg('manageDlg');
+    ov = null;
+    await loadProjects(editing ? (currentProject && currentProject.key) : d.project.key);
+  } catch (e) {
+    if (e.message !== SIGNED_OUT) { err.textContent = e.message; $('mgPrimary').textContent = editing ? '✔ Save Changes' : '✔ Save Project'; }
+  } finally { mgBusy = false; $('mgPrimary').disabled = false; }
+}
+
+// ── Go ─────────────────────────────────────────────────────────
+renderBuilder();
+(function start() {
+  const params = new URLSearchParams(location.search);
+  const openAccounts = params.get('manage') === 'accounts';
+  if (params.get('revizto') === 'connected') {
+    history.replaceState(null, '', location.pathname);
+    mgReviztoFresh = true;
+    setTimeout(() => toast('Revizto connected', '#16a34a'), 400);
+  }
+  setTab(tab);
+  loadProjects().then(() => { if (openAccounts) openManage('accounts'); });
+})();
+</script>
+</body>
+</html>
