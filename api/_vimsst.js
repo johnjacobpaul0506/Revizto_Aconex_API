@@ -65,12 +65,37 @@ function ticksToIso(fs, n) {
 }
 
 // ── One condition ───────────────────────────────────────────────
+// A short description of a block we don't understand, e.g. "fields 1, 3 (text: 'Level 2')"
+function describe(buf) {
+  try {
+    const fs = fields(buf);
+    const texts = [];
+    const walk = (b, d) => {
+      if (d > 4 || texts.length > 4) return;
+      for (const x of fields(b)) {
+        if (x.wt !== 2) continue;
+        const t = str(x.v);
+        if (/^[\x20-\x7e\u00a0-\uffff]{2,80}$/.test(t) && !/[\ufffd]/.test(t)) texts.push(t);
+        else { try { walk(x.v, d + 1); } catch { /* not a block */ } }
+      }
+    };
+    try { walk(buf, 0); } catch { /* ignore */ }
+    return `fields ${[...new Set(fs.map(x => x.f))].join(', ')}${texts.length ? ` (${texts.slice(0, 4).map(t => `"${t}"`).join(', ')})` : ''}`;
+  } catch {
+    return `${buf.length} bytes`;
+  }
+}
+
 function readOperand(buf, problems) {
   const fs = fields(buf);
   const ref = first(fs, 1);
   if (ref && ref.wt === 2) {
     const inner = first(fields(ref.v), 1);
-    if (!inner || inner.wt !== 2) { problems.push('a search set reference in a form not seen before'); return { type: 'unknown' }; }
+    if (!inner || inner.wt !== 2) {
+      const detail = describe(ref.v);
+      problems.push(`a link to something in a form not seen before: ${detail}`);
+      return { type: 'unknown', detail };
+    }
     const r = fields(inner.v);
     const path = all(r, 2).map(x => str(x.v));
     return { type: 'ref', id: text(r, 1) || '', name: path[path.length - 1] || '(unnamed search set)', path };
@@ -102,8 +127,9 @@ function readOperand(buf, problems) {
     if (valF.some(x => x.f !== 1 && x.f !== 2)) problems.push(`a value format not seen before for "${node.property}"`);
     return node;
   }
-  problems.push('a condition type not seen before');
-  return { type: 'unknown' };
+  const detail = describe(buf);
+  problems.push(`a condition type not seen before: ${detail}`);
+  return { type: 'unknown', detail };
 }
 
 // ── The query: parts in order → a tree ──────────────────────────

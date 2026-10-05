@@ -1299,9 +1299,9 @@ function drawChart() {
   const W = Math.max(320, wrap.clientWidth - 24), H = 270;
   const pad = { l: 64, r: 86, t: 22, b: 34 };
   const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Element count over time for ${m.fileName}` }, wrap);
-  let x0 = Math.min(...pts.map(p => p.t)), x1 = Math.max(...pts.map(p => p.t));
+  let x0 = pts.reduce((a, p) => Math.min(a, p.t), Infinity), x1 = pts.reduce((a, p) => Math.max(a, p.t), -Infinity);
   if (x1 - x0 < 86400000) { x0 -= 3 * 86400000; x1 += 3 * 86400000; }
-  const maxC = Math.max(...pts.map(p => p.c), 1);
+  const maxC = pts.reduce((a, p) => Math.max(a, p.c), 1);
   const step = niceStep(maxC, 4);
   const yMax = Math.ceil((maxC * 1.08) / step) * step;
   const X = t => pad.l + ((t - x0) / (x1 - x0)) * (W - pad.l - pad.r);
@@ -1419,7 +1419,7 @@ function renderBuilder() {
   $('flatBuilder').style.display = imported ? 'none' : 'flex';
   if (imported) {
     const src = sDef.source || {};
-    $('importedLogic').innerHTML = logicHtml(sDef.tree, reviztoIdKnown);
+    $('importedLogic').innerHTML = safeLogic(sDef.tree, reviztoIdKnown);
     $('importedInfo').innerHTML = src.standIn
       ? `Stand-in for a Revizto search set that wasn't exported. Import the real one to replace it.`
       : src.kind === 'copy'
@@ -1752,14 +1752,17 @@ function setGroup(k) { sDef.groupBy = k; resultPage = 0; resultSort = { i: -1, d
 
 const AGGS = { sum: 'Sum', avg: 'Average', min: 'Min', max: 'Max', count: 'Count' };
 function aggregate(vals, fn) {
-  const nums = vals.map(toNum).filter(v => v !== null);
-  if (fn === 'count') return vals.filter(v => v !== null && v !== undefined && v !== '').length;
-  if (!nums.length) return null;
-  if (fn === 'sum') return nums.reduce((a, b) => a + b, 0);
-  if (fn === 'avg') return nums.reduce((a, b) => a + b, 0) / nums.length;
-  if (fn === 'min') return Math.min(...nums);
-  if (fn === 'max') return Math.max(...nums);
-  return null;
+  if (fn === 'count') { let c = 0; for (const v of vals) if (v !== null && v !== undefined && v !== '') c++; return c; }
+  let n = 0, sum = 0, min = Infinity, max = -Infinity;
+  for (const v of vals) {
+    const x = toNum(v);
+    if (x === null) continue;
+    n++; sum += x;
+    if (x < min) min = x;
+    if (x > max) max = x;
+  }
+  if (!n) return null;
+  return fn === 'sum' ? sum : fn === 'avg' ? sum / n : fn === 'min' ? min : fn === 'max' ? max : null;
 }
 function aggOf(col) { return sDef.aggs[col.key] || (col.num ? 'sum' : 'count'); }
 function fmtCell(v, num) {
@@ -1994,15 +1997,16 @@ function logicHtml(tree, known) {
     if (!n) return '';
     if (n.type === 'cond') {
       const many = n.values.length > 1;
-      const op = n.op === 'contains' ? (many ? 'contains any of' : 'contains') : (many ? 'is any of' : 'is');
+      const op = !n.op ? `compared in a way not understood yet (code ${esc(n.opCode)})` : n.op === 'contains' ? (many ? 'contains any of' : 'contains') : (many ? 'is any of' : 'is');
       return `<span class="prop">${esc(n.category)} › ${esc(n.property)}</span> <span class="op">${op}</span> ${vals(n.values)}`;
     }
+    if (n.type === 'and' || n.type === 'or' || n.type === 'not') return group(n);
     if (n.type === 'ref') {
       const ok = known ? known(n.id) : true;
       const now = reviztoSetName(n.id) || n.name;
       return `in search set <span class="ref${ok ? '' : ' missing'}">${esc(now)}</span>${now !== n.name ? ` <span class="sub" style="display:inline">(was ${esc(n.name)})</span>` : ''}${ok ? '' : ' <span class="pill p-bad">not imported</span>'}`;
     }
-    return group(n);
+    return `<span class="pill p-bad">part not understood yet</span>${n.detail ? ` <span class="sub" style="display:inline">${esc(n.detail)}</span>` : ''}`;
   };
   const list = nodes => `<ul>${nodes.map(c => `<li>${item(c)}</li>`).join('')}</ul>`;
   const group = n => {
@@ -2016,6 +2020,10 @@ function logicHtml(tree, known) {
     return item(n);
   };
   return tree ? group(tree) : '<span class="help">No conditions</span>';
+}
+
+function safeLogic(tree, known) {
+  try { return logicHtml(tree, known); } catch { return '<span class="pill p-bad">couldn\'t show these conditions</span>'; }
 }
 
 // ── Import Revizto search sets ─────────────────────────────────
@@ -2033,7 +2041,7 @@ function openImport() {
 function toBase64(buf) {
   const bytes = new Uint8Array(buf);
   let bin = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  for (let i = 0; i < bytes.length; i += 0x2000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x2000));
   return btoa(bin);
 }
 async function readImportFiles(fileList) {
@@ -2068,7 +2076,7 @@ function renderImport() {
     return `<tr>
       <td><input type="checkbox" class="impCb" value="${esc(x.id)}" ${bad ? 'disabled' : 'checked'} onchange="updateImportBtn()"></td>
       <td class="wrap" style="min-width:180px"><strong>${esc(x.name)}</strong><div class="sub">${x.changed ? `changed ${esc(fmtDate(x.changed))}` : ''}</div></td>
-      <td style="min-width:340px"><div class="logic small">${logicHtml(x.tree, known)}</div></td>
+      <td style="min-width:340px"><div class="logic small">${safeLogic(x.tree, known)}</div></td>
       <td>${status}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="4" style="color:#64748b">No search sets in these files.</td></tr>';
