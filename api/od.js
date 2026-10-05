@@ -119,12 +119,13 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, total: list.length, matches: rankProperties(list, req.query?.q) });
       }
 
-      case 'POST search': return res.status(200).json(await runSearch(project, body));
+      case 'POST search': return res.status(200).json(await runSearch(project, body, started));
 
       default: return res.status(400).json({ ok: false, error: 'Unknown request' });
     }
   } catch (e) {
     const msg = e?.message || String(e);
+    if (e?.timeout) return res.status(503).json({ ok: false, timeout: true, error: msg });
     const needsSignIn = /not connected|expired or was revoked/i.test(msg);
     return res.status(e.status || (needsSignIn ? 409 : 502)).json({ ok: false, error: msg, reviztoNeedsSignIn: needsSignIn });
   }
@@ -188,7 +189,17 @@ async function countWith(token, project, body, started) {
   }
 
   const deadline = started + 40000;
-  const step = await countElements(token, project.revizto, { sceneId: job.sceneId, modelId: job.modelId, cursor: job.cursor, deadline });
+  job.pageSize = job.pageSize || 25000;
+  let step;
+  try {
+    step = await countElements(token, project.revizto, { sceneId: job.sceneId, modelId: job.modelId, cursor: job.cursor, deadline, pageSize: job.pageSize });
+  } catch (e) {
+    if (!e.timeout) throw e;
+    // Revizto is slow on this model: carry on in smaller pages
+    if (job.pageSize <= 2000) throw userError('Revizto is too slow to count this model right now. Try again later.', 503);
+    job.pageSize = Math.max(2000, Math.floor(job.pageSize / 2));
+    return { ok: true, done: false, soFar: job.soFar, job: sealJob(job) };
+  }
   job.soFar += step.count;
   job.cursor = step.cursor;
   job.pages += step.pages;
@@ -277,7 +288,7 @@ const OPS_FOR = {
   number: ['equal', 'notEqual', 'greaterThan', 'greaterThanOrEqual', 'lowerThan', 'lowerThanOrEqual', 'between', 'anyOf', 'noneOf'],
   bool: ['equal', 'notEqual']
 };
-const SEARCH_PAGE = 5000;
+const SEARCH_PAGE = 2000;
 
 function kindOf(t) {
   if (TEXT_TYPES.has(t)) return 'text';
@@ -320,7 +331,7 @@ function buildFilter(c, i) {
   return { node: 'filter', category, property, operator: OPS[op], value };
 }
 
-async function runSearch(project, body) {
+async function runSearch(project, body, started = Date.now()) {
   const sceneId = body.sceneId && isReviztoId(body.sceneId) ? String(body.sceneId) : null;
   const modelId = sceneId && body.modelId && isReviztoId(body.modelId) ? String(body.modelId) : null;
   let nodeFilters = null;
@@ -345,7 +356,9 @@ async function runSearch(project, body) {
   const page = await withRevizto(project.reviztoConnection, token => searchPage(token, project.revizto, {
     nodeFilters, columns, elementsOnly: body.elementsOnly !== false, sceneId, modelId,
     cursor: typeof body.cursor === 'string' && body.cursor.length < 2000 ? body.cursor : null,
-    limit: SEARCH_PAGE
+    limit: Math.min(5000, Math.max(100, Math.round(Number(body.limit) || SEARCH_PAGE))),
+    // Stop well before Vercel's 60 seconds; the page then asks again with a smaller page
+    timeoutMs: Math.max(5000, started + 48000 - Date.now())
   }));
   return { ok: true, ...page };
 }

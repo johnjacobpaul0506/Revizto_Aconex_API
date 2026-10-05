@@ -198,6 +198,7 @@ select.list option { padding: 5px 6px; border-radius: 4px; }
 .logic .ref { color: #5eead4; font-weight: bold; }
 .logic .ref.missing { color: #fca5a5; }
 .logic.small { font-size: 11px; padding: 6px 10px; max-height: 180px; overflow: auto; }
+#impBody tr { content-visibility: auto; contain-intrinsic-size: auto 120px; }
 .imp-banner { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
 .drop-zone { border: 2px dashed #1e3a6e; border-radius: 10px; padding: 22px; text-align: center; color: #94a3b8; font-size: 12px; cursor: pointer; }
 .drop-zone:hover, .drop-zone.over { border-color: #3b82f6; color: #93c5fd; background: rgba(59,130,246,.05); }
@@ -661,7 +662,7 @@ function toast(msg, color) {
   t._timer = setTimeout(() => { t.style.opacity = '0'; }, 3600);
 }
 function notice(kind, html) { $('notice').innerHTML = html ? `<div class="notice ${kind}">${html}</div>` : ''; }
-function openDlg(id) { $(id).classList.add('show'); }
+function openDlg(id) { if (typeof closePicker === 'function') closePicker(); $(id).classList.add('show'); }
 function closeDlg(id) {
   $(id).classList.remove('show');
   if (id === 'baselineDlg' && blChanged) { blChanged = false; loadOverview(); }
@@ -723,8 +724,9 @@ async function api(path, options = {}) {
   if (r.status === 401) { location.replace('/?expired=1'); throw new Error(SIGNED_OUT); }
   if (r.status === 403) { location.replace('/home?admin=1'); throw new Error(SIGNED_OUT); }
   if (!r.ok || !body || body.ok === false) {
-    const e = new Error((body && (body.error || body.message)) || `Request failed (HTTP ${r.status})`);
+    const e = new Error((body && (body.error || body.message)) || (r.status === 504 ? 'The server ran out of time waiting for Revizto (HTTP 504).' : `Request failed (HTTP ${r.status})`));
     e.body = body;
+    e.status = r.status;
     throw e;
   }
   return body;
@@ -1220,7 +1222,7 @@ async function countModels(ids) {
   const prog = $('countProgress');
   prog.style.display = 'block';
   renderCounts();
-  let done = 0, failed = 0, drops = [];
+  let done = 0, failed = 0, drops = [], errMsg = '';
   try {
     for (let i = 0; i < ids.length; i++) {
       if (countStop) break;
@@ -1238,7 +1240,8 @@ async function countModels(ids) {
       } catch (e) {
         if (e.message === SIGNED_OUT) return;
         failed++;
-        notice('err', `Could not count ${esc(m.fileName)}: ${esc(e.message)}`);
+        errMsg = `Could not count ${esc(m.fileName)}: ${esc(e.status === 504 ? 'Revizto took too long. Try counting this model again in a minute.' : e.message)}`;
+        notice('err', errMsg);
         if (e.body && (e.body.reviztoNeedsSignIn || /still processing|isn't sharing/i.test(e.message))) break;
       }
     }
@@ -1249,8 +1252,10 @@ async function countModels(ids) {
   }
   await loadOverview();
   if (ov) drops = ids.map(id => modelById.get(id)).filter(m => m && m.flag === 'drop');
+  // Reloading clears messages, so show the count problem again
+  if (errMsg && !drops.length) notice('err', errMsg);
   if (drops.length) {
-    notice('err', `<strong>⚠ Element count dropped</strong> in ${drops.map(m => `${esc(m.fileName)} (${fmtNum(m.changePct, 1)}%)`).join(', ')}. Check the 3D view that was exported.`);
+    notice('err', `<strong>⚠ Element count dropped</strong> in ${drops.map(m => `${esc(m.fileName)} (${fmtNum(m.changePct, 1)}%)`).join(', ')}. Check the 3D view that was exported.${errMsg ? `<br>${errMsg}` : ''}`);
     if (ids.length === 1) { selectedModel = drops[0].modelId; renderCounts(); drawChart(); }
   }
   if (done) toast(`Counted ${done} model${done > 1 ? 's' : ''}${failed ? `, ${failed} failed` : ''}${countStop ? ' (stopped)' : ''}`, failed ? '#b45309' : '#16a34a');
@@ -1555,7 +1560,11 @@ function choosePicker(p) {
   renderBuilder();
 }
 attachPicker($('colAdd'));
-window.addEventListener('scroll', e => { if (ppTarget && !$('pp').contains(e.target)) placePicker(ppTarget); }, true);
+let ppFrame = 0;
+window.addEventListener('scroll', e => {
+  if (!ppTarget || ppFrame || $('pp').style.display !== 'block' || $('pp').contains(e.target)) return;
+  ppFrame = requestAnimationFrame(() => { ppFrame = 0; if (ppTarget) placePicker(ppTarget); });
+}, { capture: true, passive: true });
 
 // Run: page through the results from the server
 async function runSearch() {
@@ -1578,23 +1587,66 @@ async function runSearch() {
   searching = true; searchStop = false;
   $('btnRun').disabled = true; $('btnRunStop').style.display = '';
   const prog = $('searchProgress');
-  prog.innerHTML = '<span class="spinner" style="display:inline-block"></span> Searching Revizto…';
-  const rows = [];
+  const spin = '<span class="spinner" style="display:inline-block"></span> ';
+  prog.innerHTML = spin + 'Searching Revizto…';
+  // Search one model file at a time (three at once), so no single request asks Revizto
+  // to scan the whole project. A slow piece is retried with smaller pages.
+  const parts = modelId
+    ? [{ sceneId, modelId }]
+    : ov.models.map(m => ({ sceneId: m.sceneId, modelId: m.modelId }));
+  const partRows = parts.map(() => []);
   let units = cols.map(() => '');
-  let cursor = null, capped = false, stopped = false;
+  let found = 0, finished = 0, capped = false, fatal = null;
+  const slowParts = [];
+  const queue = parts.map((p, i) => i);
+  const isSlow = e => e.status === 504 || (e.body && e.body.timeout);
+  const show = () => {
+    prog.innerHTML = spin + `Found ${fmtNum(found)} elements · ${parts.length > 1 ? `${fmtNum(finished)} of ${fmtNum(parts.length)} models searched` : 'searching'}…`;
+  };
+  const worker = async () => {
+    while (queue.length && !fatal && !searchStop && !capped) {
+      const i = queue.shift();
+      const p = parts[i];
+      let cursor = null, limit = 2000, tries = 0;
+      try {
+        while (!fatal && !searchStop && !capped) {
+          let d;
+          try {
+            d = await post('search', { ...payload, sceneId: p.sceneId, modelId: p.modelId, cursor, limit });
+          } catch (e) {
+            if (isSlow(e) && limit > 250 && tries < 6) { limit = Math.max(250, Math.floor(limit / 2)); tries++; continue; }
+            throw e;
+          }
+          for (const r of d.rows) partRows[i].push(r);
+          found += d.rows.length;
+          d.units.forEach((u, k) => { if (u && !units[k]) units[k] = u; });
+          if (found >= MAX_ROWS) capped = true;
+          cursor = d.cursor;
+          show();
+          if (!cursor) break;
+        }
+      } catch (e) {
+        if (e.message === SIGNED_OUT) { fatal = e; break; }
+        if (isSlow(e)) { slowParts.push(i); }
+        else { fatal = e; break; }
+      }
+      finished++;
+      show();
+    }
+  };
   try {
-    do {
-      const d = await post('search', { ...payload, cursor });
-      for (const r of d.rows) rows.push(r);
-      d.units.forEach((u, i) => { if (u && !units[i]) units[i] = u; });
-      cursor = d.cursor;
-      prog.innerHTML = `<span class="spinner" style="display:inline-block"></span> Found ${fmtNum(rows.length)} elements${cursor ? ' so far…' : ''}`;
-      if (rows.length >= MAX_ROWS) { capped = true; break; }
-      if (searchStop && cursor) { stopped = true; break; }
-    } while (cursor);
-    results = { cols, units, rows, scopeLabel: modelId ? $('scopeSel').selectedOptions[0].textContent : 'All models', partial: capped || stopped };
+    show();
+    await Promise.all([worker(), worker(), worker()]);
+    if (fatal) throw fatal;
+    const rows = [].concat(...partRows);
+    const stopped = searchStop && finished < parts.length;
+    const slowNames = slowParts.map(i => (modelById.get(parts[i].modelId) || {}).fileName || parts[i].modelId);
+    results = { cols, units, rows, scopeLabel: modelId ? $('scopeSel').selectedOptions[0].textContent : 'All models', partial: capped || stopped || slowNames.length > 0 };
     resultPage = 0; resultSort = { i: -1, dir: 1 };
     prog.textContent = `${fmtNum(rows.length)} elements${capped ? ` (stopped at ${fmtNum(MAX_ROWS)}; narrow the search)` : stopped ? ' (stopped early, totals are partial)' : ''}`;
+    if (slowNames.length) {
+      $('searchErr').textContent = `Revizto was too slow to search ${slowNames.length} model${slowNames.length > 1 ? 's' : ''}, so totals leave ${slowNames.length > 1 ? 'them' : 'it'} out: ${slowNames.slice(0, 6).join(', ')}${slowNames.length > 6 ? '…' : ''}. Try again, or pick that model under "In".`;
+    }
     recomputeCalcs();
   } catch (e) {
     if (e.message !== SIGNED_OUT) { $('searchErr').textContent = e.message; prog.textContent = ''; }
@@ -1992,7 +2044,7 @@ function reviztoSetName(id) {
   return s ? s.name : null;
 }
 function logicHtml(tree, known) {
-  const vals = v => v.map(x => `<span class="val">${esc(x)}</span>`).join(' ');
+  const vals = v => v.slice(0, 12).map(x => `<span class="val">${esc(x)}</span>`).join(' ') + (v.length > 12 ? ` <span class="op">+${v.length - 12} more</span>` : '');
   const item = n => {
     if (!n) return '';
     if (n.type === 'cond') {

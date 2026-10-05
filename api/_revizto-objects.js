@@ -123,7 +123,7 @@ export async function listModels(token, uuid) {
 const COUNT_PAGE = 25000;
 const NO_PROPERTIES = [{ category: 'Revizto', name: '__count_only__' }];
 
-export async function countElements(token, uuid, { sceneId, modelId, cursor = null, deadline }) {
+export async function countElements(token, uuid, { sceneId, modelId, cursor = null, deadline, pageSize = COUNT_PAGE }) {
   let count = 0;
   let next = cursor || null;
   let pages = 0;
@@ -131,10 +131,17 @@ export async function countElements(token, uuid, { sceneId, modelId, cursor = nu
   do {
     const t0 = Date.now();
     const body = bodyWithIds(
-      { limit: COUNT_PAGE, cursor: next, elementsOnly: true, propertyFilters: NO_PROPERTIES, options: OPTIONS },
+      { limit: pageSize, cursor: next, elementsOnly: true, propertyFilters: NO_PROPERTIES, options: OPTIONS },
       { sceneReviztoId: sceneId, modelReviztoId: modelId }
     );
-    const data = await reviztoPost(token, `${base(uuid)}/get-tree`, body);
+    let data;
+    try {
+      data = await reviztoPost(token, `${base(uuid)}/get-tree`, body, { timeoutMs: Math.max(3000, deadline - Date.now()) });
+    } catch (e) {
+      // Out of time: keep what was counted so far; the caller continues from `next`
+      if (e.timeout && pages > 0) break;
+      throw e;
+    }
     const items = Array.isArray(data?.items) ? data.items : [];
     count += items.length;
     next = data?.cursor || null;
@@ -174,7 +181,7 @@ export async function propertyDefinitions(token, uuid, { fresh = false } = {}) {
 
 // ── Property search: one page of matching objects ───────────────
 // columns: [{ category, name }] – the properties to bring back for each object
-export async function searchPage(token, uuid, { nodeFilters, columns, elementsOnly, sceneId, modelId, cursor, limit }) {
+export async function searchPage(token, uuid, { nodeFilters, columns, elementsOnly, sceneId, modelId, cursor, limit, timeoutMs = 0 }) {
   const body = bodyWithIds(
     {
       limit,
@@ -186,7 +193,7 @@ export async function searchPage(token, uuid, { nodeFilters, columns, elementsOn
     },
     { sceneReviztoId: sceneId || null, modelReviztoId: sceneId && modelId ? modelId : null }
   );
-  const data = await reviztoPost(token, `${base(uuid)}/get-tree`, body);
+  const data = await reviztoPost(token, `${base(uuid)}/get-tree`, body, { timeoutMs });
   const items = Array.isArray(data?.items) ? data.items : [];
   const units = columns.map(() => '');
   const rows = items.map(o => {

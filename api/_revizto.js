@@ -277,23 +277,39 @@ export async function withRevizto(connId, fn) {
 
 // Revizto returns HTTP 200 even for handled errors, with a non-zero "result".
 // HTTP 429 (result -2300) means too many requests at once: wait as asked, then try again.
-async function reviztoCall(accessToken, path, { method = 'GET', body = null } = {}) {
+async function reviztoCall(accessToken, path, { method = 'GET', body = null, timeoutMs = 0 } = {}) {
+  // With a time limit, give up before the server function itself runs out of time
+  const stopAt = timeoutMs ? Date.now() + timeoutMs : 0;
   for (let attempt = 0; ; attempt++) {
-    const r = await fetch(`${BASE}${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/json',
-        ...(body != null ? { 'Content-Type': 'application/json' } : {})
-      },
-      body: body != null ? body : undefined
-    });
-    const text = await r.text();
+    const left = stopAt ? stopAt - Date.now() : 0;
+    if (stopAt && left < 1000) throw tooSlow();
+    const ctrl = stopAt ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), left) : null;
+    let r, text;
+    try {
+      r = await fetch(`${BASE}${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+          ...(body != null ? { 'Content-Type': 'application/json' } : {})
+        },
+        body: body != null ? body : undefined,
+        signal: ctrl ? ctrl.signal : undefined
+      });
+      text = await r.text();
+    } catch (e) {
+      if (ctrl && ctrl.signal.aborted) throw tooSlow();
+      throw e;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
     let j;
     try { j = JSON.parse(text); } catch { j = null; }
     const busy = r.status === 429 || j?.result === -2300;
     if (busy && attempt < 3) {
       const wait = Math.min(Math.max(Number(r.headers.get('retry-after')) || 2, 1), 8);
+      if (stopAt && Date.now() + wait * 1000 > stopAt) throw tooSlow();
       await new Promise(res => setTimeout(res, wait * 1000));
       continue;
     }
@@ -311,13 +327,20 @@ async function reviztoCall(accessToken, path, { method = 'GET', body = null } = 
   }
 }
 
+function tooSlow() {
+  const e = new Error('Revizto took too long to answer this part.');
+  e.timeout = true;
+  return e;
+}
+
 export function reviztoGet(accessToken, path) {
   return reviztoCall(accessToken, path);
 }
 
 // body: a JSON string (built by the caller, so 64-bit Revizto Ids keep every digit)
-export function reviztoPost(accessToken, path, body) {
-  return reviztoCall(accessToken, path, { method: 'POST', body });
+// timeoutMs: give up (with error.timeout = true) if Revizto hasn't answered in time
+export function reviztoPost(accessToken, path, body, { timeoutMs = 0 } = {}) {
+  return reviztoCall(accessToken, path, { method: 'POST', body, timeoutMs });
 }
 
 // Error -20: the licence/project sits in a Revizto account where this app isn't enabled
