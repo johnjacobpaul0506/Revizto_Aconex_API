@@ -1,0 +1,7 @@
+{
+  "name": "jjp-digitalcorner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Digital Corner | Revizto object data and model checks"
+}
