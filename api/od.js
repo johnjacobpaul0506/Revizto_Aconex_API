@@ -12,6 +12,8 @@
 //   GET  /api/od?op=searches                               saved searches
 //   POST /api/od?op=search-save      { id?, name, definition }
 //   POST /api/od?op=search-delete    { id }
+//   POST /api/od?op=import-preview   { files: [{ name, data (base64) }] }      read Revizto .vimsst exports
+//   POST /api/od?op=import-save      { files, ids: [...], standIns: { refId: "model file text" } }
 
 import crypto from 'node:crypto';
 import { requireAdmin } from './_auth.js';
@@ -21,6 +23,7 @@ import { importStatus, listModels, countElements, propertyDefinitions, searchPag
 import { analyse } from './_od.js';
 import { rest, fail, select, insert, update, remove, tableMissing } from './_supabase.js';
 import { deriveKey } from './_session.js';
+import { parseVimsst, treeToNodeFilters, standInTree, validTree } from './_vimsst.js';
 
 export const config = { maxDuration: 60 };
 
@@ -41,6 +44,8 @@ export default async function handler(req, res) {
       await remove('od_searches', `id=eq.${id}`);
       return res.status(200).json({ ok: true });
     }
+    if (req.method === 'POST' && op === 'import-preview') return res.status(200).json(await importPreview(body));
+    if (req.method === 'POST' && op === 'import-save') return res.status(200).json(await importSave(body));
 
     const project = await findProject(req.method === 'GET' ? req.query?.project : body.project);
     if (!project) throw userError('Unknown or archived project', 404);
@@ -316,18 +321,27 @@ function buildFilter(c, i) {
 }
 
 async function runSearch(project, body) {
-  const conditions = Array.isArray(body.conditions) ? body.conditions.slice(0, 25) : [];
-  const nodes = conditions.map(buildFilter);
   const sceneId = body.sceneId && isReviztoId(body.sceneId) ? String(body.sceneId) : null;
   const modelId = sceneId && body.modelId && isReviztoId(body.modelId) ? String(body.modelId) : null;
-  if (!nodes.length && !modelId) throw userError('Add at least one condition, or pick one model to list.');
+  let nodeFilters = null;
+  if (body.savedId) {
+    // A search imported from Revizto: its conditions come from the saved copy, not the page
+    const all = await listSearches();
+    const saved = all.find(x => x.id === Number(body.savedId));
+    if (!saved) throw userError('That saved search no longer exists. Reload the list.', 404);
+    if (!saved.definition?.tree) throw userError('That saved search has no conditions from Revizto.');
+    nodeFilters = treeToNodeFilters(saved.definition.tree, { resolveRef: byReviztoId(all) });
+  }
+  const conditions = !body.savedId && Array.isArray(body.conditions) ? body.conditions.slice(0, 25) : [];
+  const nodes = conditions.map(buildFilter);
+  if (!nodeFilters && !nodes.length && !modelId) throw userError('Add at least one condition, or pick one model to list.');
 
   const columns = (Array.isArray(body.columns) ? body.columns : []).slice(0, 20)
     .map(c => ({ category: cleanText(c?.category, 200), name: cleanText(c?.name, 300) }))
     .filter(c => c.category && c.name);
   if (!columns.length) throw userError('Add at least one column to show.');
 
-  const nodeFilters = nodes.length ? { node: 'collection', type: body.match === 'any' ? 'or' : 'and', nodes } : null;
+  if (!nodeFilters && nodes.length) nodeFilters = { node: 'collection', type: body.match === 'any' ? 'or' : 'and', nodes };
   const page = await withRevizto(project.reviztoConnection, token => searchPage(token, project.revizto, {
     nodeFilters, columns, elementsOnly: body.elementsOnly !== false, sceneId, modelId,
     cursor: typeof body.cursor === 'string' && body.cursor.length < 2000 ? body.cursor : null,
@@ -350,7 +364,8 @@ async function saveSearch(body) {
   const name = cleanText(body.name, 80);
   if (!name) throw userError('Give the search a name.');
   const def = body.definition;
-  if (!def || typeof def !== 'object' || JSON.stringify(def).length > 30000) throw userError('That search is too large to save.');
+  if (!def || typeof def !== 'object' || JSON.stringify(def).length > 60000) throw userError('That search is too large to save.');
+  if (def.tree !== undefined && def.tree !== null && !validTree(def.tree)) throw userError('That search\'s conditions can\'t be saved.');
   const now = new Date().toISOString();
   if (body.id) {
     const r = await rest(`od_searches?id=eq.${toId(body.id)}`, {
@@ -374,6 +389,170 @@ async function saveSearch(body) {
     throw fail('save search', r);
   }
   return r.body[0];
+}
+
+// ── Import Revizto search sets (.vimsst) ────────────────────────
+const MAX_IMPORT_BYTES = 3 * 1024 * 1024;
+
+function byReviztoId(saved) {
+  const map = new Map();
+  for (const s of saved) {
+    const id = s.definition?.source?.kind === 'revizto' ? s.definition.source.id : null;
+    if (id && !map.has(id)) map.set(id, s.definition);
+  }
+  return id => map.get(id) || null;
+}
+
+// Reads every file; a search set in more than one file keeps its most recently changed copy
+function readImportFiles(body) {
+  const files = Array.isArray(body.files) ? body.files.slice(0, 20) : [];
+  if (!files.length) throw userError('Pick at least one .vimsst file exported from Revizto.');
+  let total = 0;
+  const sets = new Map();
+  const fileErrors = [];
+  for (const f of files) {
+    const name = cleanText(f?.name, 160) || 'file';
+    const buf = Buffer.from(String(f?.data || ''), 'base64');
+    total += buf.length;
+    if (total > MAX_IMPORT_BYTES) throw userError('Those files are too large to import at once. Try fewer files.');
+    try {
+      for (const set of parseVimsst(buf, name)) {
+        const prev = sets.get(set.id);
+        if (!prev || String(set.changed || '') > String(prev.changed || '')) sets.set(set.id, set);
+      }
+    } catch (e) {
+      fileErrors.push(e.message);
+    }
+  }
+  return { sets: [...sets.values()], fileErrors };
+}
+
+async function importPreview(body) {
+  const { sets, fileErrors } = readImportFiles(body);
+  const saved = await listSearches();
+  const savedById = new Map();
+  for (const s of saved) if (s.definition?.source?.kind === 'revizto' && s.definition.source.id) savedById.set(s.definition.source.id, s);
+  const inFile = new Set(sets.map(s => s.id));
+  const missing = new Map();
+  const out = sets.map(s => {
+    for (const r of s.refs) {
+      if (inFile.has(r.id)) continue;
+      const have = savedById.get(r.id);
+      if (have && !have.definition.source.standIn) continue;
+      if (!missing.has(r.id)) missing.set(r.id, { id: r.id, name: r.name, path: r.path, usedBy: [], standIn: have ? have.definition.standInText || null : null });
+      missing.get(r.id).usedBy.push(s.name);
+    }
+    const existing = savedById.get(s.id);
+    return {
+      id: s.id, name: s.name, created: s.created, changed: s.changed, file: s.file,
+      tree: s.tree, refs: s.refs, problems: s.problems,
+      existing: existing ? { id: existing.id, name: existing.name, standIn: Boolean(existing.definition.source.standIn) } : null
+    };
+  });
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return { ok: true, sets: out, missing: [...missing.values()], fileErrors };
+}
+
+async function importSave(body) {
+  const { sets } = readImportFiles(body);
+  const want = new Set((Array.isArray(body.ids) ? body.ids : []).map(String));
+  const chosen = sets.filter(s => want.has(s.id));
+  const standIns = body.standIns && typeof body.standIns === 'object' ? body.standIns : {};
+  if (!chosen.length && !Object.keys(standIns).length) throw userError('Tick at least one search set to import.');
+  const bad = chosen.find(s => s.problems.length || !s.tree);
+  if (bad) throw userError(`"${bad.name}" has parts that can't be read yet, so it can't be imported.`);
+
+  let saved = await listSearches();
+  const result = { added: 0, updated: 0, standIns: 0 };
+  const now = new Date().toISOString();
+
+  const takenName = (name, exceptId) => saved.some(x => x.id !== exceptId && x.name.toLowerCase() === name.toLowerCase());
+  const freeName = (name, exceptId) => {
+    if (!takenName(name, exceptId)) return name;
+    for (let i = 1; i < 50; i++) {
+      const n = `${name} (Revizto${i > 1 ? ` ${i}` : ''})`;
+      if (!takenName(n, exceptId)) return n;
+    }
+    return `${name} (${Date.now()})`;
+  };
+  const upsert = async (reviztoId, name, makeDef) => {
+    const existing = saved.find(x => x.definition?.source?.kind === 'revizto' && x.definition.source.id === reviztoId);
+    if (existing) {
+      const definition = makeDef(existing.definition);
+      const finalName = freeName(name, existing.id);
+      const r = await rest(`od_searches?id=eq.${existing.id}`, {
+        method: 'PATCH', headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ name: finalName, definition, updated_at: now })
+      });
+      if (!r.ok) throw fail('save imported search', r);
+      Object.assign(existing, r.body[0]);
+      return 'updated';
+    }
+    const finalName = freeName(name, null);
+    const r = await rest('od_searches', {
+      method: 'POST', headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ name: finalName, definition: makeDef(null), updated_at: now })
+    });
+    if (!r.ok) {
+      if (tableMissing(r)) throw userError(NEED_SQL, 409);
+      throw fail('save imported search', r);
+    }
+    saved = [...saved, r.body[0]];
+    return 'added';
+  };
+
+  for (const s of chosen) {
+    const columns = defaultColumns(s.tree);
+    const outcome = await upsert(s.id, cleanText(s.name, 80) || 'Imported search set', prev => ({
+      format: 2,
+      source: { kind: 'revizto', id: s.id, created: s.created, changed: s.changed, file: s.file, importedAt: now, flags: s.flags },
+      tree: s.tree,
+      refs: s.refs,
+      // Keep what was set up here (columns, formulas, totals) when a search set is imported again
+      columns: prev && !prev.source?.standIn && Array.isArray(prev.columns) && prev.columns.length ? prev.columns : columns,
+      calcs: prev && Array.isArray(prev.calcs) ? prev.calcs : [],
+      elementsOnly: prev ? prev.elementsOnly !== false : true,
+      groupBy: prev?.groupBy || '',
+      aggs: prev?.aggs || {}
+    }));
+    result[outcome]++;
+  }
+
+  // Stand-ins for search sets that weren't exported: "model file contains …"
+  for (const [refId, raw] of Object.entries(standIns).slice(0, 50)) {
+    const text = cleanText(raw, 200);
+    if (!text || !/^[0-9a-f-]{8,64}$/i.test(refId)) continue;
+    const real = saved.find(x => x.definition?.source?.kind === 'revizto' && x.definition.source.id === refId && !x.definition.source.standIn);
+    if (real) continue;
+    const ref = sets.flatMap(x => x.refs).find(r => r.id === refId);
+    const name = cleanText(ref?.name, 80) || 'Stand-in search set';
+    await upsert(refId, name, () => ({
+      format: 2,
+      source: { kind: 'revizto', id: refId, standIn: true, path: ref?.path || [], importedAt: now },
+      standInText: text,
+      tree: standInTree(text),
+      refs: [],
+      columns: [{ category: 'Item', name: 'Name', valueType: 5 }, { category: 'Item', name: 'Source File', valueType: 5 }],
+      calcs: [], elementsOnly: true, groupBy: '', aggs: {}
+    }));
+    result.standIns++;
+  }
+  return { ok: true, ...result };
+}
+
+// Item › Name, Item › Type, then the properties the search tests (up to 6 in all)
+function defaultColumns(tree) {
+  const cols = [{ category: 'Item', name: 'Name', valueType: 5 }, { category: 'Item', name: 'Type', valueType: 5 }];
+  const walk = n => {
+    if (!n) return;
+    if (n.type === 'cond' && cols.length < 6 && !cols.some(c => c.category === n.category && c.name === n.property)) {
+      cols.push({ category: n.category, name: n.property, valueType: n.valueType || 5 });
+    }
+    (n.nodes || []).forEach(walk);
+    if (n.node) walk(n.node);
+  };
+  walk(tree);
+  return cols;
 }
 
 // ── Small helpers ───────────────────────────────────────────────

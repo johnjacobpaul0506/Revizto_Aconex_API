@@ -186,6 +186,21 @@ select.list option { padding: 5px 6px; border-radius: 4px; }
 .tile-sub { font-size: 10px; color: #64748b; margin-top: 2px; }
 .pager { display: flex; gap: 8px; align-items: center; font-size: 11px; color: #94a3b8; padding: 10px 16px; border-top: 1px solid #1e3a6e; flex-wrap: wrap; }
 .agg-sel { background: transparent; border: 1px solid #1e3a6e; color: #93c5fd; border-radius: 5px; font-size: 10px; padding: 2px 4px; margin-right: 6px; }
+/* Revizto search set logic */
+.logic { background: #111827; border: 1px solid #1e3a6e; border-radius: 8px; padding: 10px 14px; font-size: 12px; line-height: 1.6; color: #cbd5e1; }
+.logic ul { list-style: none; margin: 2px 0 2px 14px; padding-left: 10px; border-left: 1px dashed #2b3a55; }
+.logic li { margin: 2px 0; }
+.logic .grp { font-size: 10px; font-weight: bold; letter-spacing: .06em; text-transform: uppercase; color: #93c5fd; }
+.logic .grp.not { color: #fca5a5; }
+.logic .prop { color: #f9fafb; }
+.logic .op { color: #94a3b8; font-style: italic; }
+.logic .val { font-family: 'Courier New', monospace; font-size: 11px; color: #e2e8f0; background: rgba(0,0,0,.25); border-radius: 3px; padding: 0 4px; }
+.logic .ref { color: #5eead4; font-weight: bold; }
+.logic .ref.missing { color: #fca5a5; }
+.logic.small { font-size: 11px; padding: 6px 10px; max-height: 180px; overflow: auto; }
+.imp-banner { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.drop-zone { border: 2px dashed #1e3a6e; border-radius: 10px; padding: 22px; text-align: center; color: #94a3b8; font-size: 12px; cursor: pointer; }
+.drop-zone:hover, .drop-zone.over { border-color: #3b82f6; color: #93c5fd; background: rgba(59,130,246,.05); }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: #1e3a6e; border-radius: 3px; }
 @media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
@@ -359,9 +374,17 @@ select.list option { padding: 5px 6px; border-radius: 4px; }
               <button class="btn-sm blue" onclick="saveSearch(false)">💾 Save</button>
               <button class="btn-sm" onclick="saveSearch(true)">Save as…</button>
               <button class="btn-sm warn" id="btnDelSaved" onclick="deleteSaved()" disabled>Delete</button>
+              <button class="btn-sm blue" onclick="openImport()">⬆ Import from Revizto</button>
             </div>
           </div>
           <div class="panel-body builder">
+            <div id="importedBox" style="display:none;">
+              <div class="imp-banner">
+                <div><div class="lbl" style="margin-bottom:2px;">Conditions from Revizto</div><div class="help" id="importedInfo"></div></div>
+              </div>
+              <div class="logic" id="importedLogic" style="margin-top:8px;"></div>
+            </div>
+            <div id="flatBuilder" style="display:flex;flex-direction:column;gap:14px;">
             <div class="b-row">
               <span class="b-label">Find elements where</span>
               <select class="f-sel" id="matchSel" style="width:auto;" onchange="sDef.match=this.value"><option value="all">all</option><option value="any">any</option></select>
@@ -369,6 +392,7 @@ select.list option { padding: 5px 6px; border-radius: 4px; }
             </div>
             <div id="conds" style="display:flex;flex-direction:column;gap:8px;"></div>
             <div><button class="btn-xs" onclick="addCondition()">＋ Add condition</button></div>
+            </div>
 
             <div class="b-row">
               <span class="b-label">In</span>
@@ -532,6 +556,46 @@ select.list option { padding: 5px 6px; border-radius: 4px; }
       <div class="foot-note" id="mgFoot"></div>
       <button class="btn-ghost" id="mgCancel" onclick="showMgList()" style="display:none;">Cancel</button>
       <button class="btn-primary" id="mgPrimary" onclick="mgPrimaryAction()">＋ Add Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Revizto search sets -->
+<div class="overlay" id="importDlg">
+  <div class="big-box">
+    <div class="big-head">
+      <div class="big-title">⬆ Import Revizto search sets</div>
+      <button class="big-close" onclick="closeDlg('importDlg')" aria-label="Close">✕</button>
+    </div>
+    <div class="big-body">
+      <div class="help">In Revizto, open <strong>Search sets</strong>, select the sets or folders you want and click <strong>Export</strong>. Then pick the <code>.vimsst</code> file(s) here; you can pick several at once. You'll see what's in them before anything is saved. Importing a set again updates it and keeps the columns and formulas you've added here.</div>
+      <label class="drop-zone" id="impDrop">
+        <input type="file" id="impFiles" accept=".vimsst" multiple style="display:none;" onchange="readImportFiles(this.files)">
+        <strong style="color:#93c5fd">Choose .vimsst files</strong> or drop them here
+      </label>
+      <div class="field-err" id="impErr" role="alert"></div>
+      <div id="impResult" style="display:none;flex-direction:column;gap:14px;">
+        <div>
+          <div class="lbl">Search sets found <span class="panel-count" id="impCount"></span></div>
+          <div class="box-tbl" style="max-height:44vh;"><table>
+            <thead><tr><th style="width:1%"><input type="checkbox" id="impAll" checked onclick="document.querySelectorAll('.impCb:not(:disabled)').forEach(c => { c.checked = this.checked; }); updateImportBtn();" aria-label="Select all"></th><th>Search set</th><th>Conditions</th><th>Status</th></tr></thead>
+            <tbody id="impBody"></tbody>
+          </table></div>
+        </div>
+        <div id="impMissingBox">
+          <div class="lbl">Search sets these depend on, but which aren't in the file(s)</div>
+          <div class="help" style="margin-bottom:8px;">Best: export these from Revizto too and add the file above. Or set up a <strong>stand-in</strong>: type text that the model file name contains (e.g. <code>_ST_</code> or <code>SMM</code>), and it will stand for "elements in models whose file name contains this". Leave it empty to decide later; searches that need it won't run until then.</div>
+          <div class="box-tbl"><table>
+            <thead><tr><th>Search set</th><th>Used by</th><th style="width:34%">Stand-in: model file contains</th></tr></thead>
+            <tbody id="impMissing"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+    <div class="big-foot">
+      <div class="foot-note" id="impFoot">Nothing is saved until you click Import.</div>
+      <button class="btn-ghost" onclick="closeDlg('importDlg')">Cancel</button>
+      <button class="btn-primary" id="impBtn" onclick="saveImport()" disabled>⬆ Import</button>
     </div>
   </div>
 </div>
@@ -1350,6 +1414,18 @@ function fillScope() {
 function renderBuilder() {
   $('matchSel').value = sDef.match;
   $('elemOnly').checked = sDef.elementsOnly !== false;
+  const imported = Boolean(sDef.tree);
+  $('importedBox').style.display = imported ? 'block' : 'none';
+  $('flatBuilder').style.display = imported ? 'none' : 'flex';
+  if (imported) {
+    const src = sDef.source || {};
+    $('importedLogic').innerHTML = logicHtml(sDef.tree, reviztoIdKnown);
+    $('importedInfo').innerHTML = src.standIn
+      ? `Stand-in for a Revizto search set that wasn't exported. Import the real one to replace it.`
+      : src.kind === 'copy'
+        ? `Copy of a search set imported from Revizto (${esc(src.from || '')}).`
+        : `Imported from <strong>${esc(src.file || 'Revizto')}</strong>${src.changed ? `, last changed in Revizto ${esc(fmtDate(src.changed))}` : ''}. To change the conditions, change them in Revizto and import again; columns, formulas and totals can be changed here.`;
+  }
   // Conditions
   $('conds').innerHTML = sDef.conditions.map((c, i) => {
     const kind = kindOf(Number(c.valueType));
@@ -1485,16 +1561,19 @@ window.addEventListener('scroll', e => { if (ppTarget && !$('pp').contains(e.tar
 async function runSearch() {
   if (searching || !currentProject) return;
   $('searchErr').textContent = '';
-  const conds = sDef.conditions.filter(c => c.property);
+  const imported = Boolean(sDef.tree);
+  if (imported && !currentSavedId) { $('searchErr').textContent = 'Save this search first.'; return; }
+  const conds = imported ? [] : sDef.conditions.filter(c => c.property);
   const [sceneId, modelId] = ($('scopeSel').value || '|').split('|');
-  if (!conds.length && !modelId) { $('searchErr').textContent = 'Add at least one condition, or pick one model to list everything in it.'; return; }
+  if (!imported && !conds.length && !modelId) { $('searchErr').textContent = 'Add at least one condition, or pick one model to list everything in it.'; return; }
   if (!sDef.columns.length) { $('searchErr').textContent = 'Add at least one column to show.'; return; }
   const bad = conds.find(c => c.op !== 'between' && kindOf(Number(c.valueType)) !== 'bool' && String(c.value).trim() === '' && c.op !== 'equal' && c.op !== 'notEqual');
   if (bad) { $('searchErr').textContent = `Enter a value for "${bad.property}".`; return; }
   const cols = sDef.columns.map(c => ({ ...c }));
   const payload = {
     match: sDef.match, conditions: conds, columns: cols.map(c => ({ category: c.category, name: c.name })),
-    elementsOnly: $('elemOnly').checked, sceneId: sceneId || null, modelId: modelId || null
+    elementsOnly: $('elemOnly').checked, sceneId: sceneId || null, modelId: modelId || null,
+    savedId: imported ? currentSavedId : null
   };
   searching = true; searchStop = false;
   $('btnRun').disabled = true; $('btnRunStop').style.display = '';
@@ -1818,7 +1897,12 @@ async function loadSaved(listOnly) {
       const d = await api('/api/od?op=searches');
       savedSearches = d.searches || [];
       searchesLoaded = true;
-      $('savedSel').innerHTML = '<option value="">Saved searches…</option>' + savedSearches.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+      const isRv = s => s.definition && s.definition.source && s.definition.source.kind === 'revizto';
+      const mine = savedSearches.filter(s => !isRv(s)), rv = savedSearches.filter(isRv);
+      const opt = s => `<option value="${s.id}">${esc(s.name)}${s.definition.source && s.definition.source.standIn ? ' (stand-in)' : ''}</option>`;
+      $('savedSel').innerHTML = '<option value="">Saved searches…</option>' +
+        (mine.length ? `<optgroup label="Your searches">${mine.map(opt).join('')}</optgroup>` : '') +
+        (rv.length ? `<optgroup label="From Revizto">${rv.map(opt).join('')}</optgroup>` : '');
       if (currentSavedId) $('savedSel').value = String(currentSavedId);
     } catch (e) { if (e.message !== SIGNED_OUT) $('searchErr').textContent = e.message; }
     return;
@@ -1828,17 +1912,28 @@ async function loadSaved(listOnly) {
   if (!s) { currentSavedId = null; renderBuilder(); return; }
   const d = s.definition || {};
   sDef = { ...blankSearch(), ...d, aggs: d.aggs || {}, calcs: d.calcs || [], conditions: d.conditions || [], columns: d.columns || [] };
+  if (!d.tree) { delete sDef.tree; delete sDef.source; delete sDef.refs; }
   currentSavedId = s.id;
   results = null; $('resultsPanel').style.display = 'none'; $('searchProgress').textContent = ''; $('searchErr').textContent = '';
   renderBuilder();
   toast(`Loaded "${s.name}". Click Run search.`, '#1d4ed8');
 }
-function definition() {
-  return {
+function definition(asCopy) {
+  const d = {
     match: sDef.match, elementsOnly: $('elemOnly').checked,
-    conditions: sDef.conditions.filter(c => c.property),
+    conditions: sDef.tree ? [] : sDef.conditions.filter(c => c.property),
     columns: sDef.columns, calcs: sDef.calcs.filter(c => c.formula.trim()), groupBy: sDef.groupBy || '', aggs: sDef.aggs
   };
+  if (sDef.tree) {
+    d.format = 2;
+    d.tree = sDef.tree;
+    d.refs = sDef.refs || [];
+    const cur = savedSearches.find(s => s.id === currentSavedId);
+    // A copy must not take over the Revizto set's identity (re-imports update the original)
+    d.source = asCopy ? { kind: 'copy', from: cur ? cur.name : '' } : sDef.source;
+    if (sDef.standInText && !asCopy) d.standInText = sDef.standInText;
+  }
+  return d;
 }
 let saveAsNew = false;
 function saveSearch(asNew) {
@@ -1852,11 +1947,13 @@ function saveSearch(asNew) {
 }
 function confirmSave() { doSave($('saveName').value.trim(), null); }
 async function doSave(name, id) {
+  const asCopy = !id && Boolean(sDef.tree);
   if (!name) { $('saveErr').textContent = 'Give the search a name.'; return; }
   $('saveBtn').disabled = true;
   try {
-    const d = await api('/api/od?op=search-save', { method: 'POST', body: JSON.stringify({ id, name, definition: definition() }) });
+    const d = await api('/api/od?op=search-save', { method: 'POST', body: JSON.stringify({ id, name, definition: definition(asCopy) }) });
     currentSavedId = d.search.id;
+    if (asCopy && sDef.tree) sDef.source = d.search.definition.source;
     closeDlg('saveDlg');
     await loadSaved(true);
     $('btnDelSaved').disabled = false;
@@ -1878,6 +1975,149 @@ async function deleteSaved() {
     toast('Deleted', '#16a34a');
   } catch (e) { if (e.message !== SIGNED_OUT) toast(e.message, '#dc2626'); }
 }
+
+// ── Revizto search set logic, shown as an indented list ────────
+function reviztoIdKnown(id) {
+  return savedSearches.some(s => s.definition && s.definition.source && s.definition.source.kind === 'revizto' && s.definition.source.id === id) ||
+    Boolean(impData && impData.sets.some(x => x.id === id));
+}
+// The current name of a Revizto search set (references keep the name it had when they were made)
+function reviztoSetName(id) {
+  const f = impData && impData.sets.find(x => x.id === id);
+  if (f) return f.name;
+  const s = savedSearches.find(x => x.definition && x.definition.source && x.definition.source.kind === 'revizto' && x.definition.source.id === id && !x.definition.source.standIn);
+  return s ? s.name : null;
+}
+function logicHtml(tree, known) {
+  const vals = v => v.map(x => `<span class="val">${esc(x)}</span>`).join(' ');
+  const item = n => {
+    if (!n) return '';
+    if (n.type === 'cond') {
+      const many = n.values.length > 1;
+      const op = n.op === 'contains' ? (many ? 'contains any of' : 'contains') : (many ? 'is any of' : 'is');
+      return `<span class="prop">${esc(n.category)} › ${esc(n.property)}</span> <span class="op">${op}</span> ${vals(n.values)}`;
+    }
+    if (n.type === 'ref') {
+      const ok = known ? known(n.id) : true;
+      const now = reviztoSetName(n.id) || n.name;
+      return `in search set <span class="ref${ok ? '' : ' missing'}">${esc(now)}</span>${now !== n.name ? ` <span class="sub" style="display:inline">(was ${esc(n.name)})</span>` : ''}${ok ? '' : ' <span class="pill p-bad">not imported</span>'}`;
+    }
+    return group(n);
+  };
+  const list = nodes => `<ul>${nodes.map(c => `<li>${item(c)}</li>`).join('')}</ul>`;
+  const group = n => {
+    if (n.type === 'not') {
+      const inner = n.node;
+      if (inner.type === 'or') return `<span class="grp not">None of these</span>${list(inner.nodes)}`;
+      if (inner.type === 'and') return `<span class="grp not">Not all of these together</span>${list(inner.nodes)}`;
+      return `<span class="grp not">Not</span> ${item(inner)}`;
+    }
+    if (n.type === 'and' || n.type === 'or') return `<span class="grp">${n.type === 'and' ? 'All of these' : 'Any of these'}</span>${list(n.nodes)}`;
+    return item(n);
+  };
+  return tree ? group(tree) : '<span class="help">No conditions</span>';
+}
+
+// ── Import Revizto search sets ─────────────────────────────────
+let impFiles = [];             // [{ name, data (base64) }]
+let impData = null;            // preview from the server
+function openImport() {
+  impFiles = []; impData = null;
+  $('impFiles').value = '';
+  $('impErr').textContent = '';
+  $('impResult').style.display = 'none';
+  $('impBtn').disabled = true;
+  $('impFoot').textContent = 'Nothing is saved until you click Import.';
+  openDlg('importDlg');
+}
+function toBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+async function readImportFiles(fileList) {
+  const files = [...(fileList || [])].filter(f => /\.vimsst$/i.test(f.name));
+  $('impErr').textContent = '';
+  if (!files.length) { $('impErr').textContent = 'Pick .vimsst files exported from Revizto Search sets.'; return; }
+  // Add to what's already picked (same name replaces)
+  for (const f of files) {
+    const data = toBase64(await f.arrayBuffer());
+    impFiles = impFiles.filter(x => x.name !== f.name).concat([{ name: f.name, data }]);
+  }
+  $('impFoot').textContent = 'Reading…';
+  try {
+    impData = await api('/api/od?op=import-preview', { method: 'POST', body: JSON.stringify({ files: impFiles }) });
+    renderImport();
+  } catch (e) {
+    if (e.message !== SIGNED_OUT) { $('impErr').textContent = e.message; $('impFoot').textContent = ''; }
+  }
+}
+function renderImport() {
+  const d = impData;
+  $('impResult').style.display = 'flex';
+  $('impErr').textContent = (d.fileErrors || []).join(' ');
+  $('impCount').textContent = `(${d.sets.length} in ${impFiles.length} file${impFiles.length > 1 ? 's' : ''}: ${impFiles.map(f => f.name).join(', ')})`;
+  const inFile = new Set(d.sets.map(x => x.id));
+  const known = id => inFile.has(id) || reviztoIdKnown(id);
+  $('impBody').innerHTML = d.sets.length ? d.sets.map(x => {
+    const bad = x.problems.length > 0 || !x.tree;
+    const status = bad ? `<span class="pill p-bad">Can't import yet</span><div class="sub">Not understood: ${esc(x.problems.join('; '))}</div>`
+      : x.existing ? `<span class="pill p-info">Updates saved</span>${x.existing.standIn ? '<div class="sub">replaces the stand-in</div>' : ''}`
+      : '<span class="pill p-ok">New</span>';
+    return `<tr>
+      <td><input type="checkbox" class="impCb" value="${esc(x.id)}" ${bad ? 'disabled' : 'checked'} onchange="updateImportBtn()"></td>
+      <td class="wrap" style="min-width:180px"><strong>${esc(x.name)}</strong><div class="sub">${x.changed ? `changed ${esc(fmtDate(x.changed))}` : ''}</div></td>
+      <td style="min-width:340px"><div class="logic small">${logicHtml(x.tree, known)}</div></td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="4" style="color:#64748b">No search sets in these files.</td></tr>';
+  $('impAll').checked = true;
+  $('impMissingBox').style.display = d.missing.length ? 'block' : 'none';
+  $('impMissing').innerHTML = d.missing.map(m => `<tr>
+      <td class="wrap"><strong>${esc(m.name)}</strong><div class="sub">${esc((m.path || []).slice(0, -1).join(' › '))}</div></td>
+      <td class="wrap" style="font-size:11px">${esc(m.usedBy.join(', '))}</td>
+      <td><input class="f-inp impStand" data-ref="${esc(m.id)}" value="${esc(m.standIn || '')}" placeholder="e.g. _ST_ (leave empty to decide later)"></td>
+    </tr>`).join('');
+  updateImportBtn();
+}
+function updateImportBtn() {
+  const n = document.querySelectorAll('.impCb:checked').length;
+  const stands = [...document.querySelectorAll('.impStand')].filter(i => i.value.trim()).length;
+  $('impBtn').disabled = !n && !stands;
+  $('impBtn').textContent = `⬆ Import ${n} search set${n === 1 ? '' : 's'}${stands ? ` + ${stands} stand-in${stands > 1 ? 's' : ''}` : ''}`;
+  const missingUsed = impData ? impData.missing.filter(m => !document.querySelector(`.impStand[data-ref="${CSS.escape(m.id)}"]`)?.value.trim()) : [];
+  $('impFoot').textContent = missingUsed.length
+    ? `${missingUsed.length} search set${missingUsed.length > 1 ? 's they depend on are' : ' they depend on is'} still missing; searches that use ${missingUsed.length > 1 ? 'them' : 'it'} won't run until it's imported or has a stand-in.`
+    : 'Nothing is saved until you click Import.';
+}
+document.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('impStand')) updateImportBtn(); });
+async function saveImport() {
+  if (!impData) return;
+  const ids = [...document.querySelectorAll('.impCb:checked')].map(c => c.value);
+  const standIns = {};
+  document.querySelectorAll('.impStand').forEach(i => { if (i.value.trim()) standIns[i.dataset.ref] = i.value.trim(); });
+  $('impBtn').disabled = true;
+  try {
+    const d = await api('/api/od?op=import-save', { method: 'POST', body: JSON.stringify({ files: impFiles, ids, standIns }) });
+    closeDlg('importDlg');
+    await loadSaved(true);
+    const parts = [];
+    if (d.added) parts.push(`${d.added} added`);
+    if (d.updated) parts.push(`${d.updated} updated`);
+    if (d.standIns) parts.push(`${d.standIns} stand-in${d.standIns > 1 ? 's' : ''}`);
+    toast(`Imported from Revizto: ${parts.join(', ') || 'nothing changed'}. Pick one under Saved searches.`, '#16a34a');
+  } catch (e) {
+    if (e.message !== SIGNED_OUT) $('impErr').textContent = e.message;
+    $('impBtn').disabled = false;
+  }
+}
+(function () {
+  const z = $('impDrop');
+  ['dragenter', 'dragover'].forEach(t => z.addEventListener(t, e => { e.preventDefault(); z.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => z.addEventListener(t, e => { e.preventDefault(); z.classList.remove('over'); }));
+  z.addEventListener('drop', e => readImportFiles(e.dataTransfer.files));
+})();
 
 // ── Manage projects (admin) ────────────────────────────────────
 let mgProjects = [], mgNeedsSetup = false, mgEditing = null, mgBusy = false, mgNameTouched = false;
